@@ -1,896 +1,646 @@
 import express, { Request, Response } from "express";
 import http from "http";
 import path from "path";
+import crypto from "crypto";
+import { WebSocketServer, WebSocket } from "ws";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import {
-  initDb,
-  getDatabase,
-  assetRepo,
-  riskRepo,
-  financingRepo,
-  auctionRepo,
-  ledgerRepo,
-  eventRepo,
-  metricsRepo,
-  userRepo,
-  sessionRepo,
-  auditRepo,
-} from "./src/db";
-import {
-  assetRegistry,
-  createFreshAsset,
-  computeRisk,
-  effectiveLtv,
-  recomputeFinance,
-  INSTRUMENT,
-} from "./src/state/assetRuntime";
-import { AssetRecord } from "./src/db/repositories/assetRepository";
-import {
-  LedgerBlock,
-  createLedgerBlock,
-  verifyLedgerChain,
-  checkLedgerCompliance,
-} from "./src/engines/ledgerEngine";
-import { runAuction } from "./src/engines/auctionEngine";
-import { runAgentEvents } from "./src/engines/agentEventEngine";
-import { wsManager } from "./src/websocket/wsManager";
-import { simulateShadowScenario, validateScenario } from "./src/engines/shadowEngine";
-import {
-  hashPassword,
-  verifyPassword,
-  validateUsername,
-  validatePassword,
-  generateSessionToken,
-  hashSessionToken,
-} from "./src/auth/passwordUtils";
-import {
-  requireAuth,
-  requireRole,
-  requireAssetOwnership,
-  extractToken,
-} from "./src/auth/authMiddleware";
 
 dotenv.config();
 
-// Initialize SQLite database and repositories
-initDb();
-
 const app = express();
 const server = http.createServer(app);
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
-let LEDGER: LedgerBlock[] = [];
+// Contract constants
+const STAGES = [
+  "PO_ISSUED",
+  "RAW_PROCURED",
+  "IN_PRODUCTION",
+  "FINISHED_GOODS",
+  "IN_TRANSIT",
+  "WAREHOUSED",
+  "DELIVERED",
+  "INVOICED",
+  "SETTLED",
+];
+
+const BASE_LTV: Record<string, number> = {
+  PO_ISSUED: 0.5,
+  RAW_PROCURED: 0.55,
+  IN_PRODUCTION: 0.6,
+  FINISHED_GOODS: 0.65,
+  IN_TRANSIT: 0.75,
+  WAREHOUSED: 0.8,
+  DELIVERED: 0.85,
+  INVOICED: 0.9,
+  SETTLED: 0.0,
+};
+
+const INSTRUMENT: Record<string, string> = {
+  PO_ISSUED: "PO financing",
+  RAW_PROCURED: "procurement financing",
+  IN_PRODUCTION: "procurement financing",
+  FINISHED_GOODS: "inventory financing",
+  IN_TRANSIT: "in-transit financing",
+  WAREHOUSED: "warehouse financing",
+  DELIVERED: "trade financing",
+  INVOICED: "invoice financing",
+  SETTLED: "settled",
+};
+
+const USERS: Record<string, { pw: string; role: string; name: string; org: string }> = {
+  ravi: { pw: "demo123", role: "supplier", name: "Ravi Kumar", org: "Ravi Textiles" },
+  ravi123: { pw: "RaviSecure!2026", role: "supplier", name: "Ravi Kumar", org: "Ravi Textiles" },
+  lender: { pw: "demo123", role: "lender", name: "Alex Mercer", org: "NBFC Capital" },
+  lender01: { pw: "LenderAlpha#2026", role: "lender", name: "Alex Mercer", org: "NBFC Capital" },
+  admin: { pw: "demo123", role: "admin", name: "Demo Director", org: "CapitalTwin" },
+  admin2026: { pw: "AdminMaster$2026", role: "admin", name: "Demo Director", org: "CapitalTwin" },
+};
+
+function nowTs(): string {
+  const d = new Date();
+  return d.toTimeString().split(" ")[0];
+}
+
+function freshAsset() {
+  return {
+    id: "ORD-123",
+    name: "10,000 t-shirts",
+    order_value: 5000000,
+    stage: "NEW",
+    physical: {
+      location: "Ravi's factory",
+      condition: "OK",
+      delay_days: 0,
+    },
+    financial: {
+      drawn: 0,
+      instrument: "—",
+      safe_limit: 0,
+      lender: "—",
+      rate: 0.0,
+      frozen: false,
+    },
+    contractual: {
+      buyer: "BigRetail",
+      terms: "net-60",
+      owner: "Ravi Textiles",
+      buyer_risk: 0.15,
+      expected_cash_date: "—",
+    },
+    risk_index: 0.08,
+    history: [] as Array<{ agent: string; reason: string; ts: string }>,
+  };
+}
+
+let ASSET = freshAsset();
+let LEDGER: Array<{
+  asset_id: string;
+  type: string;
+  lender: string;
+  amount: number;
+  note: string;
+  ts: string;
+  prev_hash: string;
+  hash: string;
+}> = [];
 let COUNTERS = { fraud_blocked: 0 };
+let AUCTION: {
+  active: boolean;
+  amount: number;
+  best: { lender: string; rate: number } | null;
+  bids: Record<string, number>;
+} = { active: false, amount: 0, best: null, bids: {} };
 
-function getClientIp(req: Request): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.socket?.remoteAddress || "127.0.0.1";
+function computeRisk(a: typeof ASSET): number {
+  const buyer_risk = a.contractual?.buyer_risk ?? 0.15;
+  const delay_days = a.physical?.delay_days ?? 0;
+  const condition = a.physical?.condition ?? "OK";
+  const cond_factor = condition !== "OK" ? 0.7 : 0.0;
+  const delay_factor = Math.min(delay_days / 10.0, 1.0);
+  const raw = 0.4 * buyer_risk + 0.25 * delay_factor + 0.2 * cond_factor + 0.15 * 0.1;
+  const clamped = Math.max(0.0, Math.min(1.0, raw));
+  return Math.round(clamped * 100) / 100;
 }
 
-function setSessionCookie(req: Request, res: Response, token: string): void {
-  const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
-  const secureFlag = isSecure ? "; Secure" : "";
-  res.setHeader(
-    "Set-Cookie",
-    `capitaltwin_session=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Lax${secureFlag}`
-  );
-}
-
-function clearSessionCookie(res: Response): void {
-  res.setHeader(
-    "Set-Cookie",
-    "capitaltwin_session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax"
-  );
-}
-
-function recordRiskSnapshot(a: AssetRecord): void {
+function effectiveLtv(a: typeof ASSET): number {
+  const stage = a.stage || "NEW";
+  const base = BASE_LTV[stage] ?? 0.0;
   const risk = computeRisk(a);
+  const eff = base * (1.0 - 0.4 * risk);
+  return Math.round(eff * 1000) / 1000;
+}
+
+function recomputeFinance(a: typeof ASSET): { capacity: number; headroom: number } {
+  const risk = computeRisk(a);
+  a.risk_index = risk;
   const eff = effectiveLtv(a);
   const orderValue = a.order_value || 5000000;
+  const drawn = a.financial?.drawn || 0;
   const capacity = Math.floor(orderValue * eff);
-  const safeLimit = a.financial?.safe_limit || 0;
+  const headroom = Math.max(capacity - drawn, 0);
 
-  riskRepo.addSnapshot({
-    asset_id: a.id || "ORD-123",
-    risk_index: risk,
-    buyer_risk: a.contractual?.buyer_risk ?? 0.15,
-    delay_days: a.physical?.delay_days ?? 0,
-    condition: a.physical?.condition ?? "OK",
-    stage: a.stage || "NEW",
-    effective_ltv: eff,
-    safe_limit: safeLimit,
-    capacity: capacity,
+  a.financial.safe_limit = headroom;
+  a.financial.frozen = capacity < drawn;
+
+  const stage = a.stage;
+  if (stage && INSTRUMENT[stage] && (a.financial.instrument === "—" || !a.financial.instrument) && stage !== "NEW") {
+    a.financial.instrument = INSTRUMENT[stage];
+  }
+
+  return { capacity, headroom };
+}
+
+function addLedger(asset_id: string, rtype: string, lender: string, amount: number, note = "") {
+  const prev_hash = LEDGER.length > 0 ? LEDGER[LEDGER.length - 1].hash : "GENESIS";
+  const ts = nowTs();
+  const amt = Math.floor(amount);
+  const raw = `${prev_hash}${asset_id}${rtype}${lender}${amt}${ts}`;
+  const h = crypto.createHash("sha256").update(raw, "utf8").digest("hex");
+  const record = {
+    asset_id,
+    type: rtype,
+    lender,
+    amount: amt,
+    note,
+    ts,
+    prev_hash,
+    hash: h,
+  };
+  LEDGER.push(record);
+  return record;
+}
+
+function verifyLedger(): boolean {
+  if (LEDGER.length === 0) return true;
+  for (let i = 0; i < LEDGER.length; i++) {
+    const rec = LEDGER[i];
+    const expected_prev = i > 0 ? LEDGER[i - 1].hash : "GENESIS";
+    if (rec.prev_hash !== expected_prev) return false;
+    const raw = `${rec.prev_hash}${rec.asset_id}${rec.type}${rec.lender}${rec.amount}${rec.ts}`;
+    const computed = crypto.createHash("sha256").update(raw, "utf8").digest("hex");
+    if (rec.hash !== computed) return false;
+  }
+  return true;
+}
+
+function totalClaims(asset_id: string): number {
+  return LEDGER.filter((r) => r.asset_id === asset_id && r.type === "financing").reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
+}
+
+function checkLedger(asset_id: string, amount: number, requester: string): { ok: boolean; reason: string } {
+  const owner = ASSET.contractual?.owner || "Ravi Textiles";
+  if (requester !== owner) {
+    return {
+      ok: false,
+      reason: `BLOCKED — requester '${requester}' does not own ${asset_id}; title is with ${owner}.`,
+    };
+  }
+  const existing = totalClaims(asset_id);
+  const eff = effectiveLtv(ASSET);
+  const orderVal = ASSET.order_value || 5000000;
+  const safeCap = Math.floor(orderVal * eff);
+  if (existing + amount > safeCap) {
+    return {
+      ok: false,
+      reason: `BLOCKED — claims would exceed safe capacity (existing ₹${existing.toLocaleString("en-IN")} + requested ₹${amount.toLocaleString("en-IN")} > ₹${safeCap.toLocaleString("en-IN")}).`,
+    };
+  }
+  return { ok: true, reason: "clear" };
+}
+
+// WebSocket Bus
+const wsClients = new Set<WebSocket>();
+
+function broadcast(obj: any) {
+  const msg = JSON.stringify(obj);
+  for (const client of wsClients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(msg);
+    }
+  }
+}
+
+async function pushTwin() {
+  broadcast({
+    kind: "twin_update",
+    asset: ASSET,
+    meta: {
+      fraud_blocked: COUNTERS.fraud_blocked,
+      ledger_count: LEDGER.length,
+    },
   });
 }
 
-async function pushMsg(assetId: string, agent: string, reason: string) {
-  const d = new Date();
-  const ts = d.toTimeString().split(" ")[0];
+async function pushMsg(agent: string, reason: string) {
+  const ts = nowTs();
   const entry = { agent, reason, ts };
-  const asset = assetRegistry.getAsset(assetId);
-  if (asset) {
-    asset.history.push(entry);
-    if (asset.history.length > 40) {
-      asset.history = asset.history.slice(-40);
-    }
+  ASSET.history.push(entry);
+  if (ASSET.history.length > 40) {
+    ASSET.history = ASSET.history.slice(-40);
   }
-  eventRepo.addEvent(assetId, agent, reason, ts);
-  wsManager.broadcast({
+  broadcast({
     kind: "agent_message",
-    asset_id: assetId,
     agent,
     reason,
     ts,
   });
 }
 
-// Health Check
-app.get("/api/health", (req: Request, res: Response) => {
-  res.json({ status: "ok", service: "CapitalTwin" });
-});
-
-// --------------------------------------------------
-// AUTHENTICATION & USER MANAGEMENT API
-// --------------------------------------------------
-
-// POST /auth/login (and /login alias)
-const handleLoginRoute = (req: Request, res: Response) => {
-  const { username = "", password = "" } = req.body || {};
-  const ip = getClientIp(req);
-
-  if (!username || typeof username !== "string" || !password || typeof password !== "string") {
-    auditRepo.logAuthEvent(null, "LOGIN_FAILURE", ip, "MISSING_FIELDS");
-    return res.status(400).json({ ok: false, error: "Username and password are required." });
-  }
-
-  const user = userRepo.getUserByUsername(username);
-  if (!user) {
-    auditRepo.logAuthEvent(null, "LOGIN_FAILURE", ip, `USER_NOT_FOUND: ${username.slice(0, 15)}`);
-    return res.status(401).json({ ok: false, error: "Invalid username or password." });
-  }
-
-  if (!user.is_active) {
-    auditRepo.logAuthEvent(user.id, "LOGIN_FAILURE", ip, "ACCOUNT_INACTIVE");
-    return res.status(403).json({
-      ok: false,
-      error: "Account has been deactivated. Please contact an administrator.",
-    });
-  }
-
-  const passwordValid = verifyPassword(password, user.password_hash, user.salt);
-  if (!passwordValid) {
-    auditRepo.logAuthEvent(user.id, "LOGIN_FAILURE", ip, "INVALID_CREDENTIALS");
-    return res.status(401).json({ ok: false, error: "Invalid username or password." });
-  }
-
-  // Generate session token and store hash in SQLite
-  const rawToken = generateSessionToken();
-  const tokenHash = hashSessionToken(rawToken);
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-  sessionRepo.createSession(user.id, tokenHash, expiresAt);
-  setSessionCookie(req, res, rawToken);
-  auditRepo.logAuthEvent(user.id, "LOGIN_SUCCESS", ip, "SUCCESS");
-
-  const safeUser = userRepo.toSafeUser(user);
-  res.json({
-    ok: true,
-    user: safeUser,
-    token: rawToken, // Provided for headless / API testing compatibility
+async function pushLedger() {
+  broadcast({
+    kind: "ledger_update",
+    records: LEDGER,
   });
-};
+}
 
-app.post("/auth/login", handleLoginRoute);
-app.post("/login", handleLoginRoute);
+// Auction Bot Definition
+const BOTS = [
+  { name: "Cautious Bank", start: 14.0, floor: 11.0, step: 0.35 },
+  { name: "Aggressive NBFC", start: 13.0, floor: 8.5, step: 0.9 },
+  { name: "Balanced Fintech", start: 13.5, floor: 9.5, step: 0.6 },
+];
 
-// POST /auth/logout
-app.post("/auth/logout", (req: Request, res: Response) => {
-  const token = extractToken(req);
-  const ip = getClientIp(req);
+async function runAuction(amount: number) {
+  AUCTION.active = true;
+  AUCTION.amount = amount;
+  AUCTION.best = null;
+  AUCTION.bids = {
+    "Cautious Bank": 14.0,
+    "Aggressive NBFC": 13.0,
+    "Balanced Fintech": 13.5,
+  };
 
-  if (token) {
-    const tokenHash = hashSessionToken(token);
-    const sessionData = sessionRepo.getSessionWithUser(tokenHash);
-    if (sessionData) {
-      sessionRepo.deleteSession(tokenHash);
-      auditRepo.logAuthEvent(sessionData.user.id, "LOGOUT", ip, "SUCCESS");
-    }
-  }
+  const risk_pts = (ASSET.risk_index || 0.08) * 4;
+  broadcast({ kind: "auction_start", amount });
 
-  clearSessionCookie(res);
-  res.json({ ok: true, message: "Logged out successfully." });
-});
-
-// GET /auth/me
-app.get("/auth/me", requireAuth, (req: Request, res: Response) => {
-  res.json({
-    ok: true,
-    user: req.user,
-  });
-});
-
-// ADMIN USER MANAGEMENT
-// GET /admin/users and /auth/admin/users
-app.get(["/admin/users", "/auth/admin/users"], requireAuth, requireRole("admin"), (req: Request, res: Response) => {
-  const users = userRepo.getAllUsers();
-  res.json({ ok: true, users });
-});
-
-// POST /admin/users and /auth/admin/users
-app.post(["/admin/users", "/auth/admin/users", "/auth/admin/create-user"], requireAuth, requireRole("admin"), (req: Request, res: Response) => {
-  const { username, password, role, name, org } = req.body || {};
-  const ip = getClientIp(req);
-
-  const usernameCheck = validateUsername(username);
-  if (!usernameCheck.valid) {
-    return res.status(400).json({ ok: false, error: usernameCheck.error });
-  }
-
-  const existing = userRepo.getUserByUsername(username);
-  if (existing) {
-    return res.status(409).json({ ok: false, error: `Username '${username}' is already taken.` });
-  }
-
-  const passwordCheck = validatePassword(password);
-  if (!passwordCheck.valid) {
-    return res.status(400).json({ ok: false, error: passwordCheck.error });
-  }
-
-  const validRoles = ["supplier", "lender", "admin"];
-  if (!role || !validRoles.includes(role)) {
-    return res.status(400).json({
-      ok: false,
-      error: `Invalid role. Must be one of: [${validRoles.join(", ")}]`,
-    });
-  }
-
-  if (!name || typeof name !== "string" || !name.trim()) {
-    return res.status(400).json({ ok: false, error: "Full name is required." });
-  }
-
-  if (!org || typeof org !== "string" || !org.trim()) {
-    return res.status(400).json({ ok: false, error: "Organization name is required." });
-  }
-
-  const { hash, salt } = hashPassword(password);
-  const newUser = userRepo.createUser({
-    username,
-    password_hash: hash,
-    salt,
-    role,
-    name,
-    org,
-  });
-
-  auditRepo.logAuthEvent(req.user!.id, "USER_CREATED", ip, `CREATED_${role.toUpperCase()}_${newUser.username}`);
-  res.status(201).json({ ok: true, user: newUser });
-});
-
-// POST /admin/users/:id/deactivate
-app.post(["/admin/users/:id/deactivate", "/auth/admin/users/:id/deactivate"], requireAuth, requireRole("admin"), (req: Request, res: Response) => {
-  const userId = req.params.id;
-  const ip = getClientIp(req);
-
-  const target = userRepo.getUserById(userId);
-  if (!target) {
-    return res.status(404).json({ ok: false, error: `User '${userId}' not found.` });
-  }
-
-  // Prevent deactivating the last active administrator
-  if (target.role === "admin") {
-    const activeAdmins = userRepo.countActiveAdmins();
-    if (activeAdmins <= 1 && target.is_active) {
-      return res.status(400).json({
-        ok: false,
-        error: "Cannot deactivate the last remaining active administrator.",
-      });
-    }
-  }
-
-  const updated = userRepo.setUserActive(userId, false);
-  if (updated) {
-    auditRepo.logAuthEvent(req.user!.id, "USER_DEACTIVATED", ip, `DEACTIVATED_${target.username}`);
-    return res.json({ ok: true, message: `User '${target.username}' has been deactivated.` });
-  }
-
-  res.status(500).json({ ok: false, error: "Failed to deactivate user." });
-});
-
-// POST /admin/users/:id/change-password
-app.post(["/admin/users/:id/change-password", "/auth/admin/users/:id/change-password"], requireAuth, requireRole("admin"), (req: Request, res: Response) => {
-  const userId = req.params.id;
-  const { password } = req.body || {};
-  const ip = getClientIp(req);
-
-  const target = userRepo.getUserById(userId);
-  if (!target) {
-    return res.status(404).json({ ok: false, error: `User '${userId}' not found.` });
-  }
-
-  const passwordCheck = validatePassword(password);
-  if (!passwordCheck.valid) {
-    return res.status(400).json({ ok: false, error: passwordCheck.error });
-  }
-
-  const { hash, salt } = hashPassword(password);
-  const updated = userRepo.updatePassword(userId, hash, salt);
-  if (updated) {
-    auditRepo.logAuthEvent(req.user!.id, "PASSWORD_CHANGED", ip, `PW_RESET_${target.username}`);
-    return res.json({ ok: true, message: `Password updated for '${target.username}'.` });
-  }
-
-  res.status(500).json({ ok: false, error: "Failed to update password." });
-});
-
-// GET /admin/audit-logs and /auth/admin/audit-logs
-app.get(["/admin/audit-logs", "/auth/admin/audit-logs"], requireAuth, requireRole("admin"), (req: Request, res: Response) => {
-  const logs = auditRepo.getRecentLogs(100);
-  res.json({ ok: true, logs });
-});
-
-// --------------------------------------------------
-// DIGITAL TWIN & FINANCING REST API (PROTECTED)
-// --------------------------------------------------
-
-// GET /assets - Authenticated
-app.get("/assets", requireAuth, (req: Request, res: Response) => {
-  const user = req.user!;
-  const all = assetRegistry
-    .getAllAssets()
-    .filter((a) => {
-      if (user.role === "supplier") {
-        const userOrg = (user.org || "").trim().toLowerCase();
-        const assetOwner = (a.contractual?.owner || "").trim().toLowerCase();
-        return !userOrg || !assetOwner || userOrg === assetOwner;
+  for (let i = 0; i < 6; i++) {
+    await new Promise((r) => setTimeout(r, 1200));
+    for (const bot of BOTS) {
+      const curr = AUCTION.bids[bot.name];
+      const botFloor = bot.floor + risk_pts;
+      if (curr > botFloor && Math.random() < 0.85) {
+        const cut = Math.random() * (bot.step - 0.2) + 0.2;
+        const newRate = Math.round(Math.max(bot.floor, curr - cut) * 100) / 100;
+        AUCTION.bids[bot.name] = newRate;
+        broadcast({ kind: "bid", lender: bot.name, rate: newRate });
       }
-      return true;
-    })
-    .map((a) => {
-      recomputeFinance(a);
-      return {
-        id: a.id,
-        name: a.name,
-        order_value: a.order_value,
-        stage: a.stage,
-        risk_index: a.risk_index,
-        safe_limit: a.financial.safe_limit,
-        owner: a.contractual?.owner,
-      };
-    });
-  res.json(all);
-});
-
-// POST /asset/create - Supplier or Admin
-app.post("/asset/create", requireAuth, requireRole("supplier", "admin"), (req: Request, res: Response) => {
-  const { id, name, order_value, buyer, terms, owner } = req.body || {};
-  const user = req.user!;
-
-  if (!id || typeof id !== "string" || !id.trim()) {
-    return res.status(400).json({ error: "Valid asset ID is required" });
-  }
-  const cleanId = id.trim();
-
-  if (assetRegistry.hasAsset(cleanId) || assetRepo.getAsset(cleanId)) {
-    return res.status(409).json({ error: `Asset with ID '${cleanId}' already exists` });
-  }
-
-  const numericOrderValue = Number(order_value);
-  if (isNaN(numericOrderValue) || numericOrderValue <= 0) {
-    return res.status(400).json({ error: "Order value must be a positive number" });
-  }
-
-  // Suppliers can only create assets for their own organization
-  const assetOwner = user.role === "supplier" ? user.org : (owner || user.org || "Ravi Textiles");
-
-  const fresh = createFreshAsset({
-    id: cleanId,
-    name: name || cleanId,
-    order_value: numericOrderValue,
-    contractual: {
-      buyer: buyer || "BigRetail",
-      terms: terms || "net-60",
-      owner: assetOwner,
-      buyer_risk: 0.15,
-      expected_cash_date: "—",
-    },
-  });
-
-  recomputeFinance(fresh);
-
-  try {
-    const dbConn = getDatabase();
-    const createTx = dbConn.transaction(() => {
-      assetRepo.saveAsset(fresh);
-      recordRiskSnapshot(fresh);
-    });
-    createTx();
-    assetRegistry.setAsset(cleanId, fresh);
-    wsManager.broadcastPortfolio();
-    return res.status(201).json(fresh);
-  } catch (err: any) {
-    console.error("Asset creation error:", err);
-    return res.status(500).json({ error: "Failed to create asset: " + (err.message || String(err)) });
-  }
-});
-
-// GET /asset/:id - Authenticated + Ownership check
-app.get("/asset/:id", requireAuth, requireAssetOwnership, (req: Request, res: Response) => {
-  const assetId = req.params.id;
-  let asset = assetRegistry.getAsset(assetId);
-
-  if (!asset) {
-    const dbAsset = assetRepo.getAsset(assetId);
-    if (!dbAsset) {
-      return res.status(404).json({ error: `Asset '${assetId}' not found` });
     }
-    dbAsset.history = eventRepo.getRecentEvents(assetId, 40);
-    assetRegistry.setAsset(assetId, dbAsset);
-    asset = dbAsset;
   }
 
-  recomputeFinance(asset);
-  const assetLedgerCount = LEDGER.filter((r) => r.asset_id === asset.id).length;
+  let minBot = "Aggressive NBFC";
+  let minRate = Infinity;
+  for (const [name, rate] of Object.entries(AUCTION.bids)) {
+    if (rate < minRate) {
+      minRate = rate;
+      minBot = name;
+    }
+  }
 
+  const best = { lender: minBot, rate: minRate };
+  AUCTION.best = best;
+  AUCTION.active = false;
+
+  broadcast({ kind: "auction_end", best, amount });
+  await pushMsg(
+    "Loan",
+    `Bank battle over — best offer ${best.rate.toFixed(2)}% from ${best.lender} for ₹${amount.toLocaleString("en-IN")}.`
+  );
+}
+
+// Agent events
+async function runAgentEvents(asset: typeof ASSET, eventType: string) {
+  const risk = asset.risk_index || 0.08;
+  const safe_lim = asset.financial?.safe_limit || 0;
+  const safe_str = safe_lim.toLocaleString("en-IN");
+
+  if (eventType === "ORDER_CONFIRMED") {
+    await pushMsg("Tracker", "Order confirmed for 10,000 t-shirts by BigRetail. Title registered to Ravi Textiles.");
+    await pushMsg("Risk", `Initial baseline risk assessed at ${risk.toFixed(2)}. Buyer BigRetail credit rating rated AA.`);
+    await pushMsg("Loan", `Safe financing headroom established at ₹${safe_str} (50% LTV). Available for PO drawdown.`);
+  } else if (eventType === "RAW_PROCURED") {
+    await pushMsg("Tracker", "Yarn & dye procured at Ravi's factory. Value added to physical asset.");
+    await pushMsg("Loan", `Stage advanced to RAW_PROCURED. Base LTV elevated to 55%. Safe limit updated to ₹${safe_str}.`);
+  } else if (eventType === "PRODUCED") {
+    await pushMsg("Tracker", "10,000 t-shirts manufactured and quality checked at Factory store.");
+    await pushMsg("Loan", `Stage updated to FINISHED_GOODS. Inventory financing headroom unlocked at 65% LTV (₹${safe_str}).`);
+  } else if (eventType === "SHIPPED") {
+    await pushMsg("Tracker", "Consignment in transit on NH-48 via GPS-tracked container fleet.");
+    await pushMsg("Risk", "In-transit sensors online. Telemetry and route adherence normal.");
+    await pushMsg("Loan", `LTV increased to 75% for in-transit financing (₹${safe_str} safe headroom).`);
+  } else if (eventType === "DELAYED") {
+    const delay = asset.physical?.delay_days || 3;
+    await pushMsg("Tracker", `Logistics alert: +3 days transit delay reported (total delay: ${delay}d) due to highway congestion.`);
+    await pushMsg("Risk", `Transit delay detected (+3 days). Risk index adjusted upwards to ${risk.toFixed(2)}. Financing capacity scaled down.`);
+  } else if (eventType === "TEMP_SPIKE") {
+    await pushMsg("Tracker", "Sensor telemetry alert: Temperature spike detected in transit container.");
+    await pushMsg("Risk", `Condition marked DEGRADED (heat). Risk index elevated to ${risk.toFixed(2)} to account for inspection buffer.`);
+  } else if (eventType === "WAREHOUSED") {
+    await pushMsg("Tracker", "Goods safely received and checked in at Chennai WH-7.");
+    await pushMsg("Loan", `Warehouse financing active at 80% LTV. Headroom recomputed to ₹${safe_str}.`);
+  } else if (eventType === "DELIVERED") {
+    await pushMsg("Tracker", "Proof of Delivery logged at BigRetail DC. Delay counter reset to 0.");
+    await pushMsg("Risk", `Delivery confirmed. Physical transit risk resolved to baseline (${risk.toFixed(2)}).`);
+    await pushMsg("Loan", `Trade financing headroom expanded to 85% LTV (₹${safe_str}).`);
+  } else if (eventType === "INVOICED") {
+    await pushMsg("Tracker", "Commercial Invoice raised for ₹50,00,000 under net-60 terms with BigRetail.");
+    await pushMsg("Loan", `Invoice financing unlocked at maximum 90% LTV (₹${safe_str} safe headroom).`);
+  } else if (eventType === "RECEIVABLE_DELAYED") {
+    await pushMsg("Tracker", "Payment alert: BigRetail missed day-60 settlement schedule.");
+    await pushMsg("Risk", `Buyer risk elevated (+0.35). Risk index adjusted to ${risk.toFixed(2)}; credit headroom constrained.`);
+  }
+}
+
+// Simple in-memory login rate limiter (zero deps): max 8 failed attempts / 15 min per IP.
+const LOGIN_ATTEMPTS = new Map<string, { count: number; resetAt: number }>();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 8;
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
+  return req.socket?.remoteAddress || "127.0.0.1";
+}
+
+function loginRateBlocked(key: string): boolean {
+  const entry = LOGIN_ATTEMPTS.get(key);
+  if (!entry) return false;
+  if (Date.now() > entry.resetAt) {
+    LOGIN_ATTEMPTS.delete(key);
+    return false;
+  }
+  return entry.count >= LOGIN_MAX_FAILURES;
+}
+
+function loginRateFail(key: string): void {
+  const now = Date.now();
+  const entry = LOGIN_ATTEMPTS.get(key);
+  if (!entry || now > entry.resetAt) {
+    LOGIN_ATTEMPTS.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    entry.count += 1;
+  }
+}
+
+function loginRateClear(key: string): void {
+  LOGIN_ATTEMPTS.delete(key);
+}
+
+// REST Endpoints
+app.post("/login", (req: Request, res: Response) => {
+  const { username, password } = req.body || {};
+  const ip = getClientIp(req);
+
+  if (loginRateBlocked(ip)) {
+    return res.status(429).json({
+      ok: false,
+      error: "Too many failed login attempts. Please wait a few minutes and try again.",
+    });
+  }
+
+  const user = USERS[username];
+  if (!user || user.pw !== password) {
+    loginRateFail(ip);
+    return res.status(401).json({ ok: false, why: "Invalid username or password" });
+  }
+
+  loginRateClear(ip);
   res.json({
-    asset,
+    ok: true,
+    username,
+    role: user.role,
+    name: user.name,
+    org: user.org,
+  });
+});
+
+app.get("/asset/:id", (req: Request, res: Response) => {
+  recomputeFinance(ASSET);
+  res.json({
+    asset: ASSET,
     meta: {
       fraud_blocked: COUNTERS.fraud_blocked,
-      ledger_count: assetLedgerCount,
+      ledger_count: LEDGER.length,
     },
   });
 });
 
-// POST /shadow/simulate - Supplier (own asset), Lender, or Admin
-app.post(
-  "/shadow/simulate",
-  requireAuth,
-  requireRole("supplier", "lender", "admin"),
-  requireAssetOwnership,
-  (req: Request, res: Response) => {
-    const { asset_id = "ORD-123", scenario } = req.body || {};
-
-  if (!asset_id || typeof asset_id !== "string" || !asset_id.trim()) {
-    return res.status(400).json({ error: "Valid asset_id is required" });
-  }
-
-  const cleanAssetId = asset_id.trim();
-  let asset = assetRegistry.getAsset(cleanAssetId);
-
-  if (!asset) {
-    const dbAsset = assetRepo.getAsset(cleanAssetId);
-    if (!dbAsset) {
-      return res.status(404).json({ error: `Asset '${cleanAssetId}' not found` });
-    }
-    dbAsset.history = eventRepo.getRecentEvents(cleanAssetId, 40);
-    assetRegistry.setAsset(cleanAssetId, dbAsset);
-    asset = dbAsset;
-  }
-
-  const validation = validateScenario(scenario);
-  if (!validation.valid) {
-    return res.status(400).json({ error: validation.error || "Invalid scenario parameters" });
-  }
-
-  try {
-    const simulationResult = simulateShadowScenario(asset, scenario);
-    return res.json({
-      ok: true,
-      simulation: simulationResult,
-    });
-  } catch (err: any) {
-    console.error("Shadow simulation error:", err);
-    return res.status(500).json({ error: "Failed to simulate shadow scenario: " + (err.message || String(err)) });
-  }
-});
-
-// GET /ledger/:id - Lender or Admin
-app.get("/ledger/:id", requireAuth, requireRole("lender", "admin"), (req: Request, res: Response) => {
-  const assetId = req.params.id;
-  if (assetId === "all") {
-    return res.json({
-      records: LEDGER,
-      chain_ok: verifyLedgerChain(LEDGER),
-    });
-  }
-
-  const filtered = LEDGER.filter((r) => r.asset_id === assetId);
+app.get("/ledger/:id", (req: Request, res: Response) => {
   res.json({
-    records: filtered,
-    chain_ok: verifyLedgerChain(LEDGER),
+    records: LEDGER,
+    chain_ok: verifyLedger(),
   });
 });
 
-// POST /event - Admin ONLY
-app.post("/event", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
+app.post("/event", async (req: Request, res: Response) => {
   const { asset_id = "ORD-123", type: etype } = req.body || {};
-  let asset = assetRegistry.getAsset(asset_id);
-
-  if (!asset) {
-    const dbAsset = assetRepo.getAsset(asset_id);
-    if (!dbAsset) {
-      return res.status(404).json({ error: `Asset '${asset_id}' not found` });
-    }
-    dbAsset.history = eventRepo.getRecentEvents(asset_id, 40);
-    assetRegistry.setAsset(asset_id, dbAsset);
-    asset = dbAsset;
-  }
-
-  const order_val = asset.order_value || 5000000;
+  const order_val = ASSET.order_value || 5000000;
 
   if (etype === "DOUBLE_FINANCE_ATTEMPT") {
-    const chk = checkLedgerCompliance(asset, order_val * 0.6, "ShadyLend Corp", LEDGER);
-    COUNTERS.fraud_blocked = metricsRepo.incrementMetric("fraud_blocked", 1);
-    const verifyStr = verifyLedgerChain(LEDGER) ? " Ledger chain verified: intact ✓" : " TAMPERED";
+    const chk = checkLedger(asset_id, order_val * 0.6, "ShadyLend Corp");
+    COUNTERS.fraud_blocked += 1;
+    const verifyStr = verifyLedger() ? " Ledger chain verified: intact ✓" : " TAMPERED";
     const fullMsg = chk.reason + verifyStr;
-    await pushMsg(asset.id, "Fraud", fullMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
+    await pushMsg("Fraud", fullMsg);
+    await pushTwin();
     return res.json({ blocked: true, reason: fullMsg });
   }
 
   if (etype === "BUYER_PAID") {
-    asset.stage = "SETTLED";
-    const drawn = asset.financial?.drawn || 0;
-    const lenderName = asset.financial?.lender || "—";
+    ASSET.stage = "SETTLED";
+    const drawn = ASSET.financial?.drawn || 0;
+    const lenderName = ASSET.financial?.lender || "—";
     if (drawn > 0) {
-      const rec = createLedgerBlock(LEDGER, asset.id, "settlement", lenderName, -drawn, "loan repaid from buyer payment");
-      LEDGER.push(rec);
-      ledgerRepo.addRecord(rec);
-      wsManager.broadcastLedger(LEDGER, asset.id);
+      addLedger(asset_id, "settlement", lenderName, -drawn, "loan repaid from buyer payment");
+      await pushLedger();
     }
-    asset.financial.drawn = 0;
-    asset.financial.rate = 0.0;
-    asset.financial.instrument = "settled";
-    asset.financial.lender = "—";
-    recomputeFinance(asset);
-
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
+    ASSET.financial.drawn = 0;
+    ASSET.financial.rate = 0.0;
+    ASSET.financial.instrument = "settled";
+    ASSET.financial.lender = "—";
+    recomputeFinance(ASSET);
 
     await pushMsg(
-      asset.id,
       "Transition",
       `Buyer paid ₹${order_val.toLocaleString("en-IN")} — loan of ₹${drawn.toLocaleString("en-IN")} settled itself; lifecycle complete.`
     );
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
+    await pushTwin();
     return res.json({ ok: true, stage: "SETTLED" });
   }
 
   if (etype === "ORDER_CONFIRMED") {
-    asset.stage = "PO_ISSUED";
-    asset.physical.location = "Ravi's factory";
+    ASSET.stage = "PO_ISSUED";
+    ASSET.physical.location = "Ravi's factory";
     const expDate = new Date();
     expDate.setDate(expDate.getDate() + 135);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    asset.contractual.expected_cash_date = `${expDate.getDate()} ${months[expDate.getMonth()]}`;
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.contractual.expected_cash_date = `${expDate.getDate()} ${months[expDate.getMonth()]}`;
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "RAW_PROCURED") {
-    asset.stage = "RAW_PROCURED";
-    asset.physical.location = "Ravi's factory";
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.stage = "RAW_PROCURED";
+    ASSET.physical.location = "Ravi's factory";
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "PRODUCED") {
-    asset.stage = "FINISHED_GOODS";
-    asset.physical.location = "Factory store";
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.stage = "FINISHED_GOODS";
+    ASSET.physical.location = "Factory store";
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "SHIPPED") {
-    asset.stage = "IN_TRANSIT";
-    asset.physical.location = "NH-48, in transit";
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.stage = "IN_TRANSIT";
+    ASSET.physical.location = "NH-48, in transit";
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "DELAYED") {
-    asset.physical.delay_days = (asset.physical?.delay_days || 0) + 3;
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, delay_days: asset.physical.delay_days });
+    ASSET.physical.delay_days = (ASSET.physical?.delay_days || 0) + 3;
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, delay_days: ASSET.physical.delay_days });
   }
 
   if (etype === "TEMP_SPIKE") {
-    asset.physical.condition = "DEGRADED (heat)";
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, condition: asset.physical.condition });
+    ASSET.physical.condition = "DEGRADED (heat)";
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, condition: ASSET.physical.condition });
   }
 
   if (etype === "WAREHOUSED") {
-    asset.stage = "WAREHOUSED";
-    asset.physical.location = "Chennai WH-7";
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.stage = "WAREHOUSED";
+    ASSET.physical.location = "Chennai WH-7";
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "DELIVERED") {
-    asset.stage = "DELIVERED";
-    asset.physical.location = `${asset.contractual.buyer} DC`;
-    asset.physical.delay_days = 0;
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.stage = "DELIVERED";
+    ASSET.physical.location = "BigRetail DC";
+    ASSET.physical.delay_days = 0;
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "INVOICED") {
-    asset.stage = "INVOICED";
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, stage: asset.stage });
+    ASSET.stage = "INVOICED";
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, stage: ASSET.stage });
   }
 
   if (etype === "RECEIVABLE_DELAYED") {
-    const bRisk = asset.contractual?.buyer_risk || 0.15;
-    asset.contractual.buyer_risk = Math.round(Math.min(1.0, bRisk + 0.35) * 100) / 100;
-    recomputeFinance(asset);
-    assetRepo.saveAsset(asset);
-    recordRiskSnapshot(asset);
-    await runAgentEvents(asset, etype, pushMsg);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-    return res.json({ ok: true, buyer_risk: asset.contractual.buyer_risk });
+    const bRisk = ASSET.contractual?.buyer_risk || 0.15;
+    ASSET.contractual.buyer_risk = Math.round(Math.min(1.0, bRisk + 0.35) * 100) / 100;
+    recomputeFinance(ASSET);
+    await runAgentEvents(ASSET, etype);
+    await pushTwin();
+    return res.json({ ok: true, buyer_risk: ASSET.contractual.buyer_risk });
   }
 
   return res.status(400).json({ error: `Unknown event type: ${etype}` });
 });
 
-// POST /financing/request - Supplier or Admin with Asset Ownership
-app.post(
-  "/financing/request",
-  requireAuth,
-  requireRole("supplier", "admin"),
-  requireAssetOwnership,
-  async (req: Request, res: Response) => {
-    const { asset_id = "ORD-123", amount } = req.body || {};
-    let asset = assetRegistry.getAsset(asset_id);
-    if (!asset) {
-      const dbAsset = assetRepo.getAsset(asset_id);
-      if (!dbAsset) {
-        return res.status(404).json({ error: `Asset '${asset_id}' not found` });
-      }
-      dbAsset.history = eventRepo.getRecentEvents(asset_id, 40);
-      assetRegistry.setAsset(asset_id, dbAsset);
-      asset = dbAsset;
-    }
+app.post("/financing/request", async (req: Request, res: Response) => {
+  const { asset_id = "ORD-123", amount } = req.body || {};
+  const { headroom } = recomputeFinance(ASSET);
 
-    const { headroom } = recomputeFinance(asset);
-
-    if (headroom <= 0) {
-      const chk = checkLedgerCompliance(asset, amount || 1, asset.contractual?.owner || "Ravi Textiles", LEDGER);
-      COUNTERS.fraud_blocked = metricsRepo.incrementMetric("fraud_blocked", 1);
-      await pushMsg(asset.id, "Fraud", chk.reason);
-      wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-      return res.status(409).json({ blocked: true, reason: chk.reason });
-    }
-
-    const requestedAmount = amount !== undefined && Number(amount) > 0 ? Number(amount) : headroom;
-    const finalAmount = Math.min(requestedAmount, headroom);
-
-    if (finalAmount < requestedAmount) {
-      const eff = effectiveLtv(asset);
-      const ltvPct = Math.round(eff * 100);
-      await pushMsg(
-        asset.id,
-        "Loan",
-        `Requested ₹${requestedAmount.toLocaleString("en-IN")} exceeds the safe limit — capped to ₹${finalAmount.toLocaleString("en-IN")} (LTV ${ltvPct}%).`
-      );
-    }
-
-    const sessionId = `auc_${asset.id}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const auction = assetRegistry.getAuction(asset.id);
-    auction.currentSessionId = sessionId;
-
-    const finRecordId = financingRepo.createRecord({
-      asset_id: asset.id,
-      amount: finalAmount,
-      requested_amount: requestedAmount,
-      status: "AUCTION_RUNNING",
-    });
-    auction.currentFinancingRecordId = finRecordId;
-
-    auctionRepo.createSession({
-      id: sessionId,
-      asset_id: asset.id,
-      amount: finalAmount,
-      status: "RUNNING",
-    });
-
-    await pushMsg(asset.id, "Fraud", "Ledger check clear — no duplicate claims; ownership verified. Opening the bank battle.");
-    runAuction(asset.id, finalAmount, pushMsg);
-    res.json({ auction: "started", asset_id: asset.id, amount: finalAmount });
+  if (headroom <= 0) {
+    const chk = checkLedger(asset_id, amount || 1, ASSET.contractual?.owner || "Ravi Textiles");
+    COUNTERS.fraud_blocked += 1;
+    await pushMsg("Fraud", chk.reason);
+    await pushTwin();
+    return res.status(409).json({ blocked: true, reason: chk.reason });
   }
-);
 
-// POST /financing/accept - Supplier or Admin with Asset Ownership
-app.post(
-  "/financing/accept",
-  requireAuth,
-  requireRole("supplier", "admin"),
-  requireAssetOwnership,
-  async (req: Request, res: Response) => {
-    const { asset_id = "ORD-123" } = req.body || {};
-    let asset = assetRegistry.getAsset(asset_id);
-    if (!asset) {
-      const dbAsset = assetRepo.getAsset(asset_id);
-      if (!dbAsset) {
-        return res.status(404).json({ error: `Asset '${asset_id}' not found` });
-      }
-      dbAsset.history = eventRepo.getRecentEvents(asset_id, 40);
-      assetRegistry.setAsset(asset_id, dbAsset);
-      asset = dbAsset;
-    }
+  const requestedAmount = amount !== undefined && Number(amount) > 0 ? Number(amount) : headroom;
+  const finalAmount = Math.min(requestedAmount, headroom);
 
-    const auction = assetRegistry.getAuction(asset.id);
-    const best = auction.best;
-    if (!best) {
-      return res.status(400).json({ error: `No active or concluded auction to accept for asset '${asset.id}'.` });
-    }
-
-    const { headroom } = recomputeFinance(asset);
-    const amt = Math.min(auction.amount || headroom, headroom) || auction.amount;
-    const stage = asset.stage || "PO_ISSUED";
-    const instrument = INSTRUMENT[stage] || "trade financing";
-
-    const ledgerRecord = createLedgerBlock(LEDGER, asset.id, "financing", best.lender, amt, instrument);
-
-    const assetBackup = JSON.parse(JSON.stringify(asset));
-    const ledgerBackup = [...LEDGER];
-    const auctionBackup = JSON.parse(JSON.stringify(auction));
-
-    try {
-      const dbConn = getDatabase();
-      const acceptTransaction = dbConn.transaction(() => {
-        // 1. Update asset
-        asset.financial.drawn = (asset.financial.drawn || 0) + amt;
-        asset.financial.lender = best.lender;
-        asset.financial.rate = best.rate;
-        asset.financial.instrument = instrument;
-        recomputeFinance(asset);
-
-        assetRepo.saveAsset(asset);
-
-        // 2. Update financing record to ACCEPTED
-        if (auction.currentFinancingRecordId) {
-          financingRepo.updateStatus(auction.currentFinancingRecordId, "ACCEPTED", {
-            lender: best.lender,
-            rate: best.rate,
-            instrument,
-            amount: amt,
-          });
-        } else {
-          const latest = financingRepo.getLatestByAsset(asset.id);
-          if (latest && latest.id) {
-            financingRepo.updateStatus(latest.id, "ACCEPTED", {
-              lender: best.lender,
-              rate: best.rate,
-              instrument,
-              amount: amt,
-            });
-          }
-        }
-
-        // 3. Update auction session to ACCEPTED
-        if (auction.currentSessionId) {
-          auctionRepo.updateSession(auction.currentSessionId, "ACCEPTED", best.lender, best.rate);
-        } else {
-          const latestSession = auctionRepo.getLatestSession(asset.id);
-          if (latestSession) {
-            auctionRepo.updateSession(latestSession.id, "ACCEPTED", best.lender, best.rate);
-          }
-        }
-
-        // 4. Append & persist ledger record
-        LEDGER.push(ledgerRecord);
-        ledgerRepo.addRecord(ledgerRecord);
-
-        // 5. Record risk snapshot
-        recordRiskSnapshot(asset);
-      });
-
-      acceptTransaction();
-    } catch (err: any) {
-      Object.assign(asset, assetBackup);
-      LEDGER = ledgerBackup;
-      Object.assign(auction, auctionBackup);
-      console.error("Financing accept transaction failed:", err);
-      return res.status(500).json({ error: "Failed to accept financing: " + (err.message || String(err)) });
-    }
-
+  if (finalAmount < requestedAmount) {
+    const eff = effectiveLtv(ASSET);
+    const ltvPct = Math.round(eff * 100);
     await pushMsg(
-      asset.id,
       "Loan",
-      `₹${amt.toLocaleString("en-IN")} disbursed by ${best.lender} at ${best.rate.toFixed(2)}% — recorded on the exposure ledger.`
+      `Requested ₹${requestedAmount.toLocaleString("en-IN")} exceeds the safe limit — capped to ₹${finalAmount.toLocaleString("en-IN")} (LTV ${ltvPct}%).`
     );
-    wsManager.broadcastLedger(LEDGER, asset.id);
-    wsManager.broadcastTwin(asset, LEDGER, COUNTERS.fraud_blocked);
-    wsManager.broadcastPortfolio();
-
-    auction.best = null;
-    res.json({ ok: true, asset_id: asset.id, amount: amt, lender: best.lender, rate: best.rate });
-  }
-);
-
-// POST /ask - Authenticated
-app.post("/ask", requireAuth, async (req: Request, res: Response) => {
-  const { q = "", question = "", asset_id = "ORD-123" } = req.body || {};
-  const queryText = q || question;
-
-  let asset = assetRegistry.getAsset(asset_id);
-  if (!asset) {
-    const dbAsset = assetRepo.getAsset(asset_id);
-    if (dbAsset) {
-      dbAsset.history = eventRepo.getRecentEvents(asset_id, 40);
-      assetRegistry.setAsset(asset_id, dbAsset);
-      asset = dbAsset;
-    } else {
-      asset = assetRegistry.getDefaultAsset();
-    }
   }
 
-  recomputeFinance(asset);
+  await pushMsg("Fraud", "Ledger check clear — no duplicate claims; ownership verified. Opening the bank battle.");
+  runAuction(finalAmount);
+  res.json({ auction: "started", amount: finalAmount });
+});
 
-  const stage = asset.stage || "NEW";
-  const loc = asset.physical?.location || "Ravi's factory";
-  const risk = (asset.risk_index || 0.08).toFixed(2);
-  const safe = (asset.financial?.safe_limit || 0).toLocaleString("en-IN");
-  const drawn = (asset.financial?.drawn || 0).toLocaleString("en-IN");
-  const inst = asset.financial?.instrument || "—";
-  const expCash = asset.contractual?.expected_cash_date || "—";
+app.post("/financing/accept", async (req: Request, res: Response) => {
+  const best = AUCTION.best;
+  if (!best) {
+    return res.status(400).json({ error: "No active or concluded auction to accept." });
+  }
 
-  const fallback = `Asset ${asset.id} (${asset.name}) is at ${stage} stage located at ${loc} with risk index ${risk}. Safe financing limit is ₹${safe} with ₹${drawn} drawn under ${inst}. Expected cash date is ${expCash}.`;
+  const { headroom } = recomputeFinance(ASSET);
+  const amt = Math.min(AUCTION.amount || headroom, headroom) || AUCTION.amount;
+  const stage = ASSET.stage || "PO_ISSUED";
+  const instrument = INSTRUMENT[stage] || "trade financing";
+
+  addLedger(ASSET.id || "ORD-123", "financing", best.lender, amt, instrument);
+
+  ASSET.financial.drawn = (ASSET.financial.drawn || 0) + amt;
+  ASSET.financial.lender = best.lender;
+  ASSET.financial.rate = best.rate;
+  ASSET.financial.instrument = instrument;
+  recomputeFinance(ASSET);
+
+  await pushMsg(
+    "Loan",
+    `₹${amt.toLocaleString("en-IN")} disbursed by ${best.lender} at ${best.rate.toFixed(2)}% — recorded on the exposure ledger.`
+  );
+  await pushLedger();
+  await pushTwin();
+
+  AUCTION.best = null;
+  res.json({ ok: true, amount: amt, lender: best.lender, rate: best.rate });
+});
+
+app.post("/ask", async (req: Request, res: Response) => {
+  const { q = "" } = req.body || {};
+  recomputeFinance(ASSET);
+
+  const stage = ASSET.stage || "NEW";
+  const loc = ASSET.physical?.location || "Ravi's factory";
+  const risk = (ASSET.risk_index || 0.08).toFixed(2);
+  const safe = (ASSET.financial?.safe_limit || 0).toLocaleString("en-IN");
+  const drawn = (ASSET.financial?.drawn || 0).toLocaleString("en-IN");
+  const inst = ASSET.financial?.instrument || "—";
+  const expCash = ASSET.contractual?.expected_cash_date || "—";
+
+  const fallback = `Asset ORD-123 is at ${stage} stage located at ${loc} with risk index ${risk}. Safe financing limit is ₹${safe} with ₹${drawn} drawn under ${inst}. Expected cash date is ${expCash}.`;
 
   let answer = fallback;
   const geminiKey = process.env.GEMINI_API_KEY;
@@ -903,7 +653,7 @@ app.post("/ask", requireAuth, async (req: Request, res: Response) => {
       });
       const response = await ai.models.generateContent({
         model: "gemini-3.7-flash",
-        contents: `You are CapitalTwin's AI Assistant for supply chain financing. Digital twin state for asset ${asset.id}: ${JSON.stringify(asset)}. Question: ${queryText}. Give a concise, professional, clear 1-2 sentence response. Direct facts only.`,
+        contents: `You are CapitalTwin's AI Assistant for supply chain financing. Digital twin state: ${JSON.stringify(ASSET)}. Question: ${q}. Give a concise, professional, clear 1-2 sentence response. Direct facts only.`,
       });
       if (response && response.text) {
         answer = response.text.trim();
@@ -913,93 +663,59 @@ app.post("/ask", requireAuth, async (req: Request, res: Response) => {
     }
   }
 
-  await pushMsg(asset.id, "Assistant", answer);
-  res.json({ answer, asset_id: asset.id });
+  await pushMsg("Assistant", answer);
+  res.json({ answer });
 });
 
 app.get("/speak", (req: Request, res: Response) => {
   res.status(503).send("Fallback to client speechSynthesis");
 });
 
-// POST /reset - Admin ONLY
-app.post("/reset", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
-  const { asset_id = "ORD-123" } = req.body || {};
-  let targetAsset = assetRegistry.getAsset(asset_id);
-  if (!targetAsset) {
-    targetAsset = assetRepo.getAsset(asset_id) || createFreshAsset({ id: asset_id });
-  }
-
-  const assetId = targetAsset.id;
-  try {
-    const dbConn = getDatabase();
-    const resetTransaction = dbConn.transaction(() => {
-      eventRepo.clearByAsset(assetId);
-      riskRepo.clearHistory(assetId);
-      financingRepo.clearByAsset(assetId);
-      auctionRepo.clearByAsset(assetId);
-      ledgerRepo.clearByAsset(assetId);
-
-      const fresh = createFreshAsset({ id: assetId, name: targetAsset?.name, order_value: targetAsset?.order_value });
-      assetRepo.saveAsset(fresh);
-      recordRiskSnapshot(fresh);
-
-      if (assetId === "ORD-123") {
-        metricsRepo.resetMetric("fraud_blocked");
-      }
-    });
-    resetTransaction();
-  } catch (err) {
-    console.error("Reset transaction error:", err);
-  }
-
-  const fresh = createFreshAsset({ id: assetId, name: targetAsset?.name, order_value: targetAsset?.order_value });
-  assetRegistry.setAsset(assetId, fresh);
-  assetRegistry.clearAuction(assetId);
-
-  LEDGER = LEDGER.filter((r) => r.asset_id !== assetId);
-  if (assetId === "ORD-123") {
-    COUNTERS.fraud_blocked = 0;
-  }
-
-  wsManager.broadcastLedger(LEDGER, assetId);
-  wsManager.broadcastTwin(fresh, LEDGER, COUNTERS.fraud_blocked);
-  wsManager.broadcastPortfolio();
-  await pushMsg(assetId, "Tracker", `Demo reset for ${assetId} — fresh asset ready.`);
-  res.json({ ok: true, asset_id: assetId });
+app.post("/reset", async (req: Request, res: Response) => {
+  ASSET = freshAsset();
+  LEDGER = [];
+  COUNTERS.fraud_blocked = 0;
+  AUCTION = { active: false, amount: 0, best: null, bids: {} };
+  await pushLedger();
+  await pushTwin();
+  await pushMsg("Tracker", "Demo reset — fresh asset ready.");
+  res.json({ ok: true });
 });
 
-// Setup WebSocket Manager
-wsManager.init(server, () => LEDGER, () => COUNTERS);
+// Setup WebSocket Server
+const wss = new WebSocketServer({ server, path: "/ws/live" });
+wss.on("connection", (ws: WebSocket) => {
+  wsClients.add(ws);
 
-// Startup and Hydration
+  // Send initial payloads
+  ws.send(
+    JSON.stringify({
+      kind: "twin_update",
+      asset: ASSET,
+      meta: {
+        fraud_blocked: COUNTERS.fraud_blocked,
+        ledger_count: LEDGER.length,
+      },
+    })
+  );
+
+  ws.send(
+    JSON.stringify({
+      kind: "ledger_update",
+      records: LEDGER,
+    })
+  );
+
+  ws.on("close", () => {
+    wsClients.delete(ws);
+  });
+  ws.on("error", () => {
+    wsClients.delete(ws);
+  });
+});
+
+// Static / Vite integration
 async function start() {
-  try {
-    const allPersistedAssets = assetRepo.getAllAssets();
-    if (allPersistedAssets.length === 0) {
-      const defaultAsset = createFreshAsset({ id: "ORD-123" });
-      recomputeFinance(defaultAsset);
-      assetRepo.saveAsset(defaultAsset);
-      recordRiskSnapshot(defaultAsset);
-      metricsRepo.setMetric("fraud_blocked", 0);
-      assetRegistry.setAsset("ORD-123", defaultAsset);
-    } else {
-      for (const persAsset of allPersistedAssets) {
-        persAsset.history = eventRepo.getRecentEvents(persAsset.id, 40);
-        recomputeFinance(persAsset);
-        assetRegistry.setAsset(persAsset.id, persAsset);
-      }
-    }
-
-    LEDGER = ledgerRepo.getAll();
-    const chainOk = verifyLedgerChain(LEDGER);
-    if (!chainOk) {
-      console.warn("⚠️ Warning: Hydrated ledger failed hash integrity check!");
-    }
-    COUNTERS.fraud_blocked = metricsRepo.getMetric("fraud_blocked", 0);
-  } catch (hydrationErr) {
-    console.error("Database hydration error:", hydrationErr);
-  }
-
   app.use("/vendor", express.static(path.join(process.cwd(), "static", "vendor")));
   app.use("/vendor", express.static(path.join(process.cwd(), "public", "vendor")));
   app.use("/static", express.static(path.join(process.cwd(), "static")));
@@ -1019,9 +735,8 @@ async function start() {
   }
 
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`CapitalTwin Multi-Asset Server running on http://0.0.0.0:${PORT}`);
+    console.log(`CapitalTwin Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
 start();
-

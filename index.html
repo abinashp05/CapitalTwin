@@ -161,27 +161,6 @@
     .stage-item:hover {
       background-color: rgba(255, 255, 255, 0.04);
     }
-
-    /* Predictive Risk Shadow Theme Overlays */
-    .shadow-panel {
-      background: linear-gradient(135deg, rgba(18, 22, 42, 0.95) 0%, rgba(16, 20, 38, 0.98) 100%);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    }
-    .shadow-preset-btn:hover {
-      background: rgba(131, 56, 236, 0.12);
-    }
-    .shadow-preset-btn.active-preset {
-      border-color: #8338EC !important;
-      background: rgba(131, 56, 236, 0.22) !important;
-      color: #FFFFFF !important;
-    }
-    @keyframes shadowFreezePulse {
-      0%, 100% { opacity: 1; border-color: rgba(230, 57, 70, 0.85); }
-      50% { opacity: 0.65; border-color: rgba(230, 57, 70, 0.3); }
-    }
-    .shadow-freeze-warning {
-      animation: shadowFreezePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased">
@@ -218,14 +197,14 @@
       <div class="space-y-2">
         <label class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Quick Role Login</label>
         <div class="grid grid-cols-3 gap-2">
-          <button type="button" onclick="fillLogin('ravi123', 'RaviSecure!2026')" class="px-3 py-2 text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-lg transition text-center btn-press">
-            Supplier<br/><span class="text-slate-400 text-[10px]">ravi123</span>
+          <button type="button" onclick="fillLogin('ravi', 'demo123')" class="px-3 py-2 text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-lg transition text-center btn-press">
+            Supplier<br/><span class="text-slate-400 text-[10px]">ravi</span>
           </button>
-          <button type="button" onclick="fillLogin('lender01', 'LenderAlpha#2026')" class="px-3 py-2 text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-lg transition text-center btn-press">
-            Lender<br/><span class="text-slate-400 text-[10px]">lender01</span>
+          <button type="button" onclick="fillLogin('lender', 'demo123')" class="px-3 py-2 text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-lg transition text-center btn-press">
+            Lender<br/><span class="text-slate-400 text-[10px]">lender</span>
           </button>
-          <button type="button" onclick="fillLogin('admin2026', 'AdminMaster$2026')" class="px-3 py-2 text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-lg transition text-center btn-press">
-            Admin<br/><span class="text-slate-400 text-[10px]">admin2026</span>
+          <button type="button" onclick="fillLogin('admin', 'demo123')" class="px-3 py-2 text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 rounded-lg transition text-center btn-press">
+            Admin<br/><span class="text-slate-400 text-[10px]">admin</span>
           </button>
         </div>
       </div>
@@ -233,7 +212,7 @@
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 pt-2">
         <div>
           <label for="usernameInput" class="block text-xs font-semibold text-slate-300 mb-1">Username</label>
-          <input id="usernameInput" type="text" required class="w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. ravi123" />
+          <input id="usernameInput" type="text" required class="w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. ravi" />
         </div>
         <div>
           <label for="passwordInput" class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
@@ -249,7 +228,7 @@
       </form>
 
       <div class="pt-2 border-t border-white/10 text-center">
-        <p class="text-xs text-slate-400">Seeded: <strong class="text-slate-200">ravi123</strong> (<span class="text-slate-400">RaviSecure!2026</span>) · <strong class="text-slate-200">lender01</strong> (<span class="text-slate-400">LenderAlpha#2026</span>) · <strong class="text-slate-200">admin2026</strong> (<span class="text-slate-400">AdminMaster$2026</span>)</p>
+        <p class="text-xs text-slate-400">demo accounts: <strong class="text-slate-200">ravi</strong> · <strong class="text-slate-200">lender</strong> · <strong class="text-slate-200">admin</strong> — password <strong class="text-slate-200">demo123</strong></p>
       </div>
     </div>
   </div>
@@ -321,22 +300,10 @@
       
       <!-- SECTION C: TOP BAR -->
       <header class="h-16 bg-[#0E1222] border-b border-white/10 px-6 flex items-center justify-between shrink-0">
-        <!-- Asset Selector & Portfolio Switcher -->
-        <div class="flex items-center space-x-2.5">
-          <!-- Asset Selector Dropdown -->
-          <div class="flex items-center space-x-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 hover:border-indigo-500/40 transition">
-            <span class="w-2 h-2 rounded-full pulse-dot shrink-0" style="background: var(--navy);"></span>
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Twin:</span>
-            <select id="assetSelectDropdown" onchange="selectAsset(this.value)" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1">
-              <option value="ORD-123" class="bg-[#12162A] text-white">ORD-123 · 10,000 t-shirts</option>
-            </select>
-          </div>
-
-          <!-- + Add Asset Action Button -->
-          <button onclick="openAddAssetModal()" class="px-3 py-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 btn-press shadow-sm">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="hidden sm:inline">Add Asset</span>
-          </button>
+        <!-- Disabled Search -->
+        <div class="relative w-72">
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" disabled placeholder="Search twin ORD-123..." class="w-full pl-9 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-slate-500 cursor-not-allowed" />
         </div>
 
         <div class="flex items-center space-x-5">
@@ -365,20 +332,6 @@
         <!-- ==================== SECTION D: SUPPLIER VIEW ==================== -->
         <div id="supplierView" class="space-y-6 max-w-7xl mx-auto">
           
-          <!-- Compact Portfolio Summary Strip -->
-          <div class="ct-card p-4 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span class="w-2 h-2 rounded-full" style="background: var(--mint);"></span>
-                <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Portfolio Digital Twins</span>
-              </div>
-              <span id="portfolioAssetCountBadge" class="text-[10px] font-mono text-slate-400 font-semibold">1 Active Twin</span>
-            </div>
-            <div id="portfolioSummaryCards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              <!-- Rendered dynamically by JS -->
-            </div>
-          </div>
-          
           <!-- Alert Card (when delay_days > 0 or condition != 'OK' or buyer_risk > 0.3) -->
           <div id="supplierAlertCard" class="hidden ct-card p-4 border-l-4 border-red-500 bg-red-950/30 space-y-2">
             <div class="flex items-center space-x-2 text-red-400 font-bold text-sm">
@@ -395,7 +348,7 @@
             </div>
             <div class="space-y-1">
               <h2 class="text-lg font-bold text-white">No live asset yet</h2>
-              <p class="text-xs text-slate-400 max-w-md mx-auto">Confirm the order from the Control room to initialize the digital twin for <strong id="emptyStateAssetId" class="text-slate-200">ORD-123</strong>.</p>
+              <p class="text-xs text-slate-400 max-w-md mx-auto">Confirm the order from the Control room to initialize the digital twin for ORD-123.</p>
             </div>
             <div id="adminInitBtn" class="pt-2">
               <button onclick="triggerEvent('ORDER_CONFIRMED')" class="px-5 py-2.5 text-xs font-semibold text-white rounded-lg shadow-lg transition btn-press border border-white/20" style="background: var(--navy);">
@@ -421,8 +374,8 @@
                   </div>
                   <div class="text-right">
                     <span class="text-xs font-semibold text-slate-500">Digital Twin</span>
-                    <p id="twinIdDisplay" class="text-sm font-bold text-white">ORD-123</p>
-                    <p id="twinDescDisplay" class="text-[11px] text-slate-400">10,000 t-shirts · ₹50L</p>
+                    <p class="text-sm font-bold text-white">ORD-123</p>
+                    <p class="text-[11px] text-slate-400">10,000 t-shirts · ₹50L</p>
                   </div>
                 </div>
 
@@ -556,11 +509,8 @@
           <!-- Registry Table -->
           <div class="ct-card p-6 space-y-4">
             <div class="flex items-center justify-between">
-              <div>
-                <h3 class="text-sm font-bold text-white">Registry & Credit Status</h3>
-                <p class="text-[11px] text-slate-400">Click any asset row to switch digital twin context</p>
-              </div>
-              <span id="registryCountBadge" class="text-xs font-semibold text-slate-400">1 Asset Active</span>
+              <h3 class="text-sm font-bold text-white">Registry & Credit Status</h3>
+              <span class="text-xs font-semibold text-slate-400">5 Assets Total</span>
             </div>
 
             <div class="overflow-x-auto">
@@ -575,281 +525,63 @@
                     <th class="pb-3 px-2 text-center">Risk Gauge</th>
                   </tr>
                 </thead>
-                <tbody id="registryTableBody" class="divide-y divide-white/5 text-slate-300 font-medium">
-                  <!-- Dynamic rows rendered by JS -->
+                <tbody class="divide-y divide-white/5 text-slate-300 font-medium">
+                  <!-- Live ORD-123 Row -->
+                  <tr class="bg-indigo-500/10 border-y border-indigo-500/20">
+                    <td class="py-3 px-2 font-bold text-white flex items-center space-x-2">
+                      <span>ORD-123</span>
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold text-emerald-300 bg-emerald-950/70 border border-emerald-500/30">LIVE</span>
+                    </td>
+                    <td class="py-3 px-2">
+                      <div class="flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full pulse-dot" style="background: var(--navy);"></span>
+                        <span id="tableLiveStage" class="font-bold text-white">PO_ISSUED</span>
+                      </div>
+                    </td>
+                    <td class="py-3 px-2 text-right font-bold text-white">₹50L</td>
+                    <td id="tableLiveDrawn" class="py-3 px-2 text-right font-bold" style="color: var(--mint);">₹0L</td>
+                    <td id="tableLiveLtv" class="py-3 px-2 text-right font-bold text-white">48%</td>
+                    <td class="py-3 px-2 text-center">
+                      <div id="tableLiveRiskGauge" class="inline-flex items-center justify-center"></div>
+                    </td>
+                  </tr>
+
+                  <!-- Static Gray Rows -->
+                  <tr class="text-slate-400 hover:bg-white/[0.02]">
+                    <td class="py-3 px-2 font-medium text-slate-300">AST-8941</td>
+                    <td class="py-3 px-2">WAREHOUSED</td>
+                    <td class="py-3 px-2 text-right">₹54L</td>
+                    <td class="py-3 px-2 text-right">₹12L</td>
+                    <td class="py-3 px-2 text-right">22%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">0.14</span></td>
+                  </tr>
+                  <tr class="text-slate-400 hover:bg-white/[0.02]">
+                    <td class="py-3 px-2 font-medium text-slate-300">AST-8810</td>
+                    <td class="py-3 px-2">IN_TRANSIT</td>
+                    <td class="py-3 px-2 text-right">₹89L</td>
+                    <td class="py-3 px-2 text-right">₹65L</td>
+                    <td class="py-3 px-2 text-right">73%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-300 border border-amber-500/30">0.42</span></td>
+                  </tr>
+                  <tr class="text-slate-400 hover:bg-white/[0.02]">
+                    <td class="py-3 px-2 font-medium text-slate-300">AST-8755</td>
+                    <td class="py-3 px-2">INVOICED</td>
+                    <td class="py-3 px-2 text-right">₹220L</td>
+                    <td class="py-3 px-2 text-right">₹198L</td>
+                    <td class="py-3 px-2 text-right">90%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-950/60 text-red-300 border border-red-500/30">0.68</span></td>
+                  </tr>
+                  <tr class="text-slate-400 hover:bg-white/[0.02]">
+                    <td class="py-3 px-2 font-medium text-slate-300">AST-8622</td>
+                    <td class="py-3 px-2">PO_ISSUED</td>
+                    <td class="py-3 px-2 text-right">₹31L</td>
+                    <td class="py-3 px-2 text-right">₹0L</td>
+                    <td class="py-3 px-2 text-right">0%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">0.10</span></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <!-- ======================================================= -->
-          <!-- PREDICTIVE RISK SHADOW: STRESS SIMULATOR COMPONENT      -->
-          <!-- ======================================================= -->
-          <div id="predictiveShadowContainer" class="ct-card shadow-panel p-6 space-y-4 border border-purple-500/30 rounded-2xl relative overflow-hidden">
-            
-            <!-- Ambient Shadow Banner Badge -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/10 gap-3">
-              <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/40 flex items-center justify-center text-purple-300 font-bold text-base shadow-inner">
-                  🔮
-                </div>
-                <div>
-                  <div class="flex items-center space-x-2">
-                    <h3 class="text-sm sm:text-base font-bold text-white tracking-wide">Predictive Risk Shadow</h3>
-                    <span class="text-[9px] px-2 py-0.5 rounded-full bg-purple-950/70 border border-purple-500/50 text-purple-300 font-mono font-bold uppercase tracking-wider">
-                      Hypothetical Sandbox
-                    </span>
-                  </div>
-                  <p class="text-xs text-slate-400 mt-0.5">
-                    Simulate physical IoT disruptions and counterparty shocks against <strong id="shadowTargetAssetBadge" class="font-mono text-cyan-300">ORD-123</strong>.
-                  </p>
-                </div>
-              </div>
-              
-              <!-- Simulation Safety Guarantee Badge -->
-              <div class="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-black/40 border border-purple-500/30 text-[11px] text-purple-200 font-mono font-semibold">
-                <span class="w-2 h-2 rounded-full bg-purple-400 pulse-dot"></span>
-                <span>SIMULATION ONLY — DOES NOT MODIFY THE LIVE DIGITAL TWIN</span>
-              </div>
-            </div>
-
-            <!-- Error Banner (if API fails or input rejected) -->
-            <div id="shadowErrorBanner" class="hidden p-3 rounded-xl bg-red-950/50 border border-red-500/50 text-red-300 text-xs font-medium flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span>⚠️</span>
-                <span id="shadowErrorMessage">Simulation error occurred.</span>
-              </div>
-              <button type="button" onclick="hideShadowError()" class="text-red-400 hover:text-white font-bold px-2 py-0.5 text-sm">&times;</button>
-            </div>
-
-            <!-- Main 2-Column Grid: Controls (Left 5 Cols) & Differential Visualizer (Right 7 Cols) -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-1">
-              
-              <!-- Left Column: Scenario Presets & Parameter Steppers (5 Cols) -->
-              <div class="lg:col-span-5 flex flex-col space-y-4">
-                
-                <!-- Preset Quick Pills -->
-                <div>
-                  <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                    Scenario Presets
-                  </label>
-                  <div class="grid grid-cols-2 gap-2 text-xs">
-                    <button type="button" id="btnPresetDelay3" onclick="applyShadowPreset('DELAY_3D')" class="shadow-preset-btn px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-200 hover:text-white transition text-left flex items-center justify-between btn-press">
-                      <span class="font-medium">⏱️ 3-Day Delay</span>
-                      <span class="text-[10px] text-purple-300 font-mono font-bold">+3d</span>
-                    </button>
-                    <button type="button" id="btnPresetDelay7" onclick="applyShadowPreset('DELAY_7D')" class="shadow-preset-btn px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-200 hover:text-white transition text-left flex items-center justify-between btn-press">
-                      <span class="font-medium">🛑 7-Day Bottleneck</span>
-                      <span class="text-[10px] text-purple-300 font-mono font-bold">+7d</span>
-                    </button>
-                    <button type="button" id="btnPresetTemp" onclick="applyShadowPreset('TEMP_SPIKE')" class="shadow-preset-btn px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-200 hover:text-white transition text-left flex items-center justify-between btn-press">
-                      <span class="font-medium">🔥 Temp Spike</span>
-                      <span class="text-[10px] text-amber-300 font-mono font-bold">+5°C</span>
-                    </button>
-                    <button type="button" id="btnPresetBuyer" onclick="applyShadowPreset('BUYER_RISK')" class="shadow-preset-btn px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-200 hover:text-white transition text-left flex items-center justify-between btn-press">
-                      <span class="font-medium">📉 Buyer Downgrade</span>
-                      <span class="text-[10px] text-red-300 font-mono font-bold">+0.30</span>
-                    </button>
-                    <button type="button" id="btnPresetCrisis" onclick="applyShadowPreset('CRISIS_SHOCK')" class="shadow-preset-btn col-span-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-purple-950/40 to-red-950/30 border border-purple-500/40 text-purple-200 hover:text-white transition text-left flex items-center justify-between btn-press shadow-sm">
-                      <span class="font-bold">⚡ Compound Multi-Point Shock (Delay + Heat + Downgrade)</span>
-                      <span class="text-[10px] text-red-300 font-mono font-black uppercase tracking-wider">STRESS</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Fine-Grained Stepper Controls -->
-                <div class="bg-black/30 border border-white/10 rounded-xl p-4 space-y-3.5">
-                  
-                  <!-- Delay Stepper -->
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <span class="text-xs text-slate-200 font-bold block">Transit Delay Delta</span>
-                      <span class="text-[10px] text-slate-400">Normal tolerance: &lt; 5 days</span>
-                    </div>
-                    <div class="flex items-center space-x-1.5">
-                      <button type="button" aria-label="Decrease transit delay" onclick="adjustShadowControl('delay', -1)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center font-bold text-sm btn-press transition">-</button>
-                      <span id="shadowInputDelay" class="w-14 text-center font-mono text-xs text-cyan-300 font-bold">+0 d</span>
-                      <button type="button" aria-label="Increase transit delay" onclick="adjustShadowControl('delay', 1)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center font-bold text-sm btn-press transition">+</button>
-                    </div>
-                  </div>
-
-                  <!-- Temperature Stepper -->
-                  <div class="flex items-center justify-between pt-2.5 border-t border-white/5">
-                    <div>
-                      <span class="text-xs text-slate-200 font-bold block">Container Temp Spike</span>
-                      <span class="text-[10px] text-slate-400">&ge; +4°C degrades cargo condition</span>
-                    </div>
-                    <div class="flex items-center space-x-1.5">
-                      <button type="button" aria-label="Decrease temperature spike" onclick="adjustShadowControl('temp', -1)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center font-bold text-sm btn-press transition">-</button>
-                      <span id="shadowInputTemp" class="w-14 text-center font-mono text-xs text-amber-300 font-bold">+0°C</span>
-                      <button type="button" aria-label="Increase temperature spike" onclick="adjustShadowControl('temp', 1)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center font-bold text-sm btn-press transition">+</button>
-                    </div>
-                  </div>
-
-                  <!-- Buyer Credit Risk Adjustment -->
-                  <div class="flex items-center justify-between pt-2.5 border-t border-white/5">
-                    <div>
-                      <span class="text-xs text-slate-200 font-bold block">Buyer Risk Adjustment</span>
-                      <span class="text-[10px] text-slate-400">Counterparty default weighting</span>
-                    </div>
-                    <div class="flex items-center space-x-1.5">
-                      <button type="button" aria-label="Decrease buyer risk adjustment" onclick="adjustShadowControl('buyerRisk', -0.05)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center font-bold text-sm btn-press transition">-</button>
-                      <span id="shadowInputBuyerRisk" class="w-14 text-center font-mono text-xs text-purple-300 font-bold">+0.00</span>
-                      <button type="button" aria-label="Increase buyer risk adjustment" onclick="adjustShadowControl('buyerRisk', 0.05)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center font-bold text-sm btn-press transition">+</button>
-                    </div>
-                  </div>
-
-                  <!-- Hypothetical Stage Simulation -->
-                  <div class="flex items-center justify-between pt-2.5 border-t border-white/5">
-                    <span class="text-xs text-slate-200 font-bold">Hypothetical Stage</span>
-                    <select id="shadowInputStage" onchange="onShadowStageChanged(this.value)" class="bg-[#12162A] border border-white/15 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500 font-semibold cursor-pointer">
-                      <option value="">(Keep Current Stage)</option>
-                      <option value="PO_ISSUED">PO_ISSUED (50% Base LTV)</option>
-                      <option value="RAW_PROCURED">RAW_PROCURED (55% Base LTV)</option>
-                      <option value="IN_PRODUCTION">IN_PRODUCTION (60% Base LTV)</option>
-                      <option value="FINISHED_GOODS">FINISHED_GOODS (65% Base LTV)</option>
-                      <option value="IN_TRANSIT">IN_TRANSIT (75% Base LTV)</option>
-                      <option value="WAREHOUSED">WAREHOUSED (80% Base LTV)</option>
-                      <option value="DELIVERED">DELIVERED (85% Base LTV)</option>
-                      <option value="INVOICED">INVOICED (90% Base LTV)</option>
-                    </select>
-                  </div>
-
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex items-center space-x-2.5 pt-1">
-                  <button id="btnRunSimulation" type="button" onclick="executeShadowSimulation()" class="flex-1 py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold tracking-wide transition flex items-center justify-center space-x-2 btn-press shadow-lg shadow-purple-900/40 border border-purple-400/30">
-                    <span>⚡ Run Predictive Simulation</span>
-                  </button>
-                  <button type="button" onclick="resetShadowControls()" class="py-2.5 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-semibold transition btn-press">
-                    ↺ Reset
-                  </button>
-                </div>
-
-              </div>
-
-              <!-- Right Column: Comparative Impact Visualization & Diagnostics (7 Cols) -->
-              <div class="lg:col-span-7 flex flex-col justify-between bg-black/30 border border-white/10 rounded-xl p-4 sm:p-5">
-                
-                <!-- Empty State (Initially visible) -->
-                <div id="shadowResultEmptyState" class="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2.5">
-                  <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-2xl text-purple-400">
-                    🔮
-                  </div>
-                  <div class="text-sm font-bold text-white">Select a Preset or Adjust Parameters</div>
-                  <p class="text-xs text-slate-400 max-w-sm">
-                    Run an ephemeral stress test to simulate how logistics delays, cold-chain spikes, or buyer rating adjustments dynamically compress safe financing capacity.
-                  </p>
-                </div>
-
-                <!-- Populated Results Container (Initially hidden) -->
-                <div id="shadowResultContent" class="hidden flex flex-col space-y-4" aria-live="polite">
-                  
-                  <!-- Header with Scenario Name and Status Badge -->
-                  <div class="flex items-center justify-between pb-3 border-b border-white/10">
-                    <div>
-                      <span class="text-[10px] uppercase text-purple-300 font-mono font-bold tracking-wider">Simulated Scenario</span>
-                      <h4 id="shadowResultScenarioName" class="text-sm font-bold text-white">7-Day Transit Bottleneck</h4>
-                    </div>
-                    <div id="shadowResultStatusBadge" class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-950/70 border border-emerald-500/40 text-emerald-300">
-                      HEADROOM STABLE
-                    </div>
-                  </div>
-
-                  <!-- Comparative Metrics Table -->
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-left">
-                      <thead>
-                        <tr class="text-[10px] text-slate-400 uppercase font-bold tracking-wider border-b border-white/10">
-                          <th class="py-1.5 px-2">Metric Dimension</th>
-                          <th class="py-1.5 px-2 text-right">Live Baseline</th>
-                          <th class="py-1.5 px-2 text-right text-purple-300">Predicted Shadow</th>
-                          <th class="py-1.5 px-2 text-right">Delta / Change</th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-white/5 font-mono">
-                        <tr>
-                          <td class="py-2 px-2 text-slate-200 font-sans font-semibold">Risk Index</td>
-                          <td id="shadowBaseRisk" class="py-2 px-2 text-right text-slate-400 font-medium">0.08</td>
-                          <td id="shadowPredRisk" class="py-2 px-2 text-right text-purple-300 font-bold">0.25</td>
-                          <td id="shadowDeltaRisk" class="py-2 px-2 text-right text-red-400 font-bold">+0.17</td>
-                        </tr>
-                        <tr>
-                          <td class="py-2 px-2 text-slate-200 font-sans font-semibold">Effective LTV</td>
-                          <td id="shadowBaseLtv" class="py-2 px-2 text-right text-slate-400 font-medium">72.6%</td>
-                          <td id="shadowPredLtv" class="py-2 px-2 text-right text-purple-300 font-bold">67.5%</td>
-                          <td id="shadowDeltaLtv" class="py-2 px-2 text-right text-amber-400 font-bold">-5.1%</td>
-                        </tr>
-                        <tr>
-                          <td class="py-2 px-2 text-slate-200 font-sans font-semibold">Safe Credit Capacity</td>
-                          <td id="shadowBaseCapacity" class="py-2 px-2 text-right text-slate-400 font-medium">₹36,30,000</td>
-                          <td id="shadowPredCapacity" class="py-2 px-2 text-right text-purple-300 font-bold">₹33,75,000</td>
-                          <td id="shadowDeltaCapacity" class="py-2 px-2 text-right text-amber-400 font-bold">-₹2,55,000</td>
-                        </tr>
-                        <tr>
-                          <td class="py-2 px-2 text-slate-200 font-sans font-semibold">Available Headroom</td>
-                          <td id="shadowBaseHeadroom" class="py-2 px-2 text-right text-slate-400 font-medium">₹36,30,000</td>
-                          <td id="shadowPredHeadroom" class="py-2 px-2 text-right text-purple-300 font-bold">₹33,75,000</td>
-                          <td id="shadowDeltaHeadroom" class="py-2 px-2 text-right text-amber-400 font-bold">-₹2,55,000</td>
-                        </tr>
-                        <tr>
-                          <td class="py-2 px-2 text-slate-200 font-sans font-semibold">Drawn Debt</td>
-                          <td id="shadowBaseDrawn" class="py-2 px-2 text-right text-slate-400 font-medium">₹0</td>
-                          <td id="shadowPredDrawn" class="py-2 px-2 text-right text-purple-300 font-bold">₹0</td>
-                          <td class="py-2 px-2 text-right text-slate-500 font-sans">₹0</td>
-                        </tr>
-                        <tr>
-                          <td class="py-2 px-2 text-slate-200 font-sans font-semibold">Drawdown Lock Status</td>
-                          <td id="shadowBaseFrozen" class="py-2 px-2 text-right text-emerald-400 font-semibold">ACTIVE</td>
-                          <td id="shadowPredFrozen" class="py-2 px-2 text-right text-emerald-400 font-bold">ACTIVE</td>
-                          <td id="shadowDeltaFrozen" class="py-2 px-2 text-right text-slate-400 font-sans">No Change</td>
-                        </tr>
-                        <tr class="text-[11px] text-slate-400">
-                          <td class="py-2 px-2 text-slate-300 font-sans">Condition / Delay / Buyer</td>
-                          <td id="shadowBaseMeta" class="py-2 px-2 text-right font-mono">OK · 0d · 0.15</td>
-                          <td id="shadowPredMeta" class="py-2 px-2 text-right text-purple-300 font-mono font-semibold">OK · 7d · 0.15</td>
-                          <td id="shadowDeltaMeta" class="py-2 px-2 text-right font-sans text-amber-400">+7d delay</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <!-- Dynamic Capacity Compression Visual Bar -->
-                  <div class="bg-white/[0.03] rounded-xl p-3.5 border border-white/10 space-y-2">
-                    <div class="flex justify-between text-[11px]">
-                      <span class="text-slate-400 font-medium">Predicted Credit Cushion vs. Drawn Debt</span>
-                      <span id="shadowCushionPercent" class="font-mono text-cyan-300 font-bold">100% Healthy</span>
-                    </div>
-                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden flex shadow-inner">
-                      <div id="shadowDrawnBar" class="bg-indigo-500 h-full transition-all duration-300" style="width: 0%" title="Active Drawn Debt"></div>
-                      <div id="shadowHeadroomBar" class="bg-purple-500 h-full transition-all duration-300" style="width: 70%" title="Simulated Available Headroom"></div>
-                      <div id="shadowHaircutBar" class="bg-red-500/80 h-full transition-all duration-300" style="width: 30%" title="Credit Haircut Loss"></div>
-                    </div>
-                    <div class="flex justify-between text-[10px] text-slate-400 font-mono pt-0.5">
-                      <span>Drawn: <strong id="shadowBarDrawnText" class="text-white">₹0</strong></span>
-                      <span>Simulated Cap: <strong id="shadowBarCapText" class="text-purple-300">₹33.75L</strong></span>
-                      <span>Order Ceiling: <strong id="shadowBarOrderText" class="text-cyan-300">₹50.0L</strong></span>
-                    </div>
-                  </div>
-
-                  <!-- Warnings & Diagnostics Box -->
-                  <div id="shadowWarningsContainer" class="hidden rounded-xl bg-amber-950/30 border border-amber-500/40 p-3 space-y-1.5">
-                    <div class="flex items-center space-x-2 text-amber-400 text-xs font-bold">
-                      <span>⚠️</span>
-                      <span>Simulated Risk Diagnostics</span>
-                    </div>
-                    <ul id="shadowWarningsList" class="text-xs text-slate-200 list-disc list-inside space-y-1 font-medium pl-1">
-                      <!-- Populated dynamically via textContent -->
-                    </ul>
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
           </div>
 
           <!-- Bank Battle Arena & Exposure Ledger -->
@@ -1046,61 +778,6 @@
     </button>
   </div>
 
-  <!-- MODAL: Add New Asset Twin -->
-  <div id="addAssetModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="ct-card w-full max-w-md p-6 space-y-4 bg-[#12162A]">
-      <div class="flex items-center justify-between pb-2 border-b border-white/10">
-        <div>
-          <h3 class="text-base font-bold text-white">Create Digital Twin Asset</h3>
-          <p class="text-xs text-slate-400">Initialize a new order-backed asset with isolated lifecycle</p>
-        </div>
-        <button onclick="closeAddAssetModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
-      </div>
-
-      <form id="addAssetForm" onsubmit="handleCreateAsset(event)" class="space-y-3.5">
-        <div>
-          <label for="newAssetId" class="block text-xs font-semibold text-slate-300 mb-1">Asset ID (e.g. ORD-124) *</label>
-          <input id="newAssetId" type="text" required placeholder="ORD-124" class="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        <div>
-          <label for="newAssetName" class="block text-xs font-semibold text-slate-300 mb-1">Asset Name / Description *</label>
-          <input id="newAssetName" type="text" required placeholder="5,000 Linen Shirts" class="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        <div>
-          <label for="newOrderValue" class="block text-xs font-semibold text-slate-300 mb-1">Order Value (₹) *</label>
-          <input id="newOrderValue" type="number" required min="10000" step="10000" placeholder="4000000" class="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label for="newBuyer" class="block text-xs font-semibold text-slate-300 mb-1">Buyer</label>
-            <input id="newBuyer" type="text" value="BigRetail" placeholder="BigRetail" class="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          </div>
-          <div>
-            <label for="newTerms" class="block text-xs font-semibold text-slate-300 mb-1">Payment Terms</label>
-            <input id="newTerms" type="text" value="net-60" placeholder="net-60" class="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          </div>
-        </div>
-
-        <div>
-          <label for="newOwner" class="block text-xs font-semibold text-slate-300 mb-1">Supplier / Owner</label>
-          <input id="newOwner" type="text" value="Ravi Textiles" placeholder="Ravi Textiles" class="w-full px-3.5 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-
-        <div id="addAssetError" class="hidden p-2.5 bg-red-950/60 border border-red-500/40 rounded-lg text-xs font-medium text-red-300"></div>
-
-        <div class="pt-2 flex justify-end space-x-2">
-          <button type="button" onclick="closeAddAssetModal()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold rounded-lg transition">Cancel</button>
-          <button type="submit" id="createAssetSubmitBtn" class="px-5 py-2 text-white font-bold rounded-lg text-xs shadow-lg transition btn-press border border-white/15" style="background: var(--navy);">
-            <span>Create Asset Twin</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- MODAL: Full Ledger History -->
   <div id="ledgerModal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
     <div class="ct-card w-full max-w-2xl max-h-[85vh] p-6 space-y-4 flex flex-col bg-[#12162A]">
@@ -1213,9 +890,6 @@
     // State Variables
     let currentUser = null;
     let currentView = "supplier";
-    let selectedAssetId = "ORD-123";
-    let portfolioAssets = [];
-    let assetFeedMessages = {};
     let assetState = null;
     let ledgerRecords = [];
     let fraudBlockedCount = 0;
@@ -1243,34 +917,21 @@
     let autopilotIndex = 0;
 
     // Initialization
-    window.addEventListener("DOMContentLoaded", async () => {
+    window.addEventListener("DOMContentLoaded", () => {
       initChart();
       renderTimeline();
       
-      try {
-        const res = await fetch("/auth/me", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.ok && data.user) {
-            currentUser = data.user;
-            sessionStorage.setItem("capitaltwin_user", JSON.stringify(currentUser));
-            showApp();
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("Session check failed:", e);
-      }
-
       const stored = sessionStorage.getItem("capitaltwin_user");
       if (stored) {
         try {
           currentUser = JSON.parse(stored);
           showApp();
-          return;
-        } catch {}
+        } catch {
+          showLogin();
+        }
+      } else {
+        showLogin();
       }
-      showLogin();
     });
 
     // ==================== SECTION A: AUTHENTICATION ====================
@@ -1284,50 +945,30 @@
       const u = document.getElementById("usernameInput").value.trim();
       const p = document.getElementById("passwordInput").value.trim();
       const errBox = document.getElementById("loginError");
-      const btn = document.getElementById("loginBtn");
       errBox.classList.add("hidden");
 
-      if (!u || !p) {
-        errBox.textContent = "Please enter both username and password.";
-        errBox.classList.remove("hidden");
-        return;
-      }
-
-      if (btn) btn.disabled = true;
-
       try {
-        const res = await fetch("/auth/login", {
+        const res = await fetch("/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({ username: u, password: p })
         });
         const data = await res.json();
         if (res.ok && data.ok) {
-          currentUser = data.user || data;
+          currentUser = data;
           sessionStorage.setItem("capitaltwin_user", JSON.stringify(currentUser));
           showApp();
         } else {
-          errBox.textContent = data.error || data.why || "Invalid username or password.";
+          errBox.textContent = data.why || "Invalid username or password";
           errBox.classList.remove("hidden");
         }
       } catch (err) {
-        errBox.textContent = "Network error connecting to backend.";
+        errBox.textContent = "Network error connecting to backend";
         errBox.classList.remove("hidden");
-      } finally {
-        if (btn) btn.disabled = false;
       }
     }
 
-    async function handleLogout() {
-      try {
-        await fetch("/auth/logout", {
-          method: "POST",
-          credentials: "include"
-        });
-      } catch (e) {
-        console.warn("Logout request failed:", e);
-      }
+    function handleLogout() {
       sessionStorage.removeItem("capitaltwin_user");
       currentUser = null;
       if (ws) {
@@ -1422,344 +1063,6 @@
       }, 100);
     }
 
-    // ==================== SECTION C: MULTI-ASSET PORTFOLIO MANAGEMENT ====================
-    async function fetchPortfolio() {
-      try {
-        const res = await fetch("/assets");
-        if (res.ok) {
-          const data = await res.json();
-          portfolioAssets = Array.isArray(data.assets) ? data.assets : [];
-          renderPortfolioSelector();
-          renderPortfolioSummary();
-        }
-      } catch (e) {
-        console.error("Error fetching portfolio assets:", e);
-      }
-    }
-
-    function renderPortfolioSelector() {
-      const select = document.getElementById("assetSelectDropdown");
-      if (!select) return;
-
-      const currentVal = selectedAssetId;
-      select.innerHTML = "";
-
-      if (portfolioAssets.length === 0) {
-        const opt = document.createElement("option");
-        opt.value = selectedAssetId || "ORD-123";
-        opt.textContent = `${selectedAssetId || "ORD-123"} · Demo Asset`;
-        select.appendChild(opt);
-      } else {
-        portfolioAssets.forEach(a => {
-          const opt = document.createElement("option");
-          opt.value = a.id;
-          const stageLabel = STAGE_NAMES[a.stage] || a.stage || "New";
-          const valLakhs = a.order_value ? (a.order_value / 100000).toFixed(0) : "50";
-          opt.textContent = `${a.id} — ${a.name || "Order"} (₹${valLakhs}L · ${stageLabel})`;
-          select.appendChild(opt);
-        });
-      }
-
-      select.value = currentVal;
-    }
-
-    function renderPortfolioSummary() {
-      // 1. Top Bar Count Badge
-      const countBadge = document.getElementById("portfolioAssetCountBadge");
-      if (countBadge) {
-        const count = portfolioAssets.length || 1;
-        countBadge.textContent = `${count} Asset${count > 1 ? "s" : ""}`;
-      }
-
-      // 2. Supplier View Portfolio Summary Strip
-      const cardsContainer = document.getElementById("portfolioSummaryCards");
-      if (cardsContainer && portfolioAssets.length > 0) {
-        cardsContainer.innerHTML = "";
-        portfolioAssets.forEach(a => {
-          const isSelected = a.id === selectedAssetId;
-          const stage = a.stage || "PO_ISSUED";
-          const safe = a.financial?.safe_limit || 0;
-          const drawn = a.financial?.drawn || 0;
-          const risk = a.risk_index ?? 0.08;
-          const valLakhs = a.order_value ? (a.order_value / 100000).toFixed(0) : "50";
-
-          const card = document.createElement("div");
-          card.className = `p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between space-y-2 ${
-            isSelected
-              ? "bg-indigo-500/15 border-indigo-500/60 ring-1 ring-indigo-500/40 shadow-lg"
-              : "bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20"
-          }`;
-          card.onclick = () => selectAsset(a.id);
-
-          let riskBadgeClass = "bg-emerald-950/60 text-emerald-300 border-emerald-500/30";
-          if (risk >= 0.6) riskBadgeClass = "bg-red-950/60 text-red-300 border-red-500/30";
-          else if (risk >= 0.3) riskBadgeClass = "bg-amber-950/60 text-amber-300 border-amber-500/30";
-
-          card.innerHTML = `
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5">
-                <span class="font-bold text-xs ${isSelected ? "text-indigo-200" : "text-white"}">${a.id}</span>
-                ${isSelected ? '<span class="px-1.5 py-0.2 rounded text-[8px] font-black text-emerald-300 bg-emerald-950/70 border border-emerald-500/30">ACTIVE</span>' : ''}
-              </div>
-              <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${riskBadgeClass}">
-                Risk: ${risk.toFixed(2)}
-              </span>
-            </div>
-            <p class="text-[11px] text-slate-400 truncate font-medium">${a.name || "Asset Twin"}</p>
-            <div class="pt-1 border-t border-white/5 flex items-center justify-between text-[10px]">
-              <span class="text-slate-400">${STAGE_NAMES[stage] || stage}</span>
-              <span class="font-bold" style="color: var(--mint);">₹${(safe / 100000).toFixed(1)}L safe</span>
-            </div>
-          `;
-          cardsContainer.appendChild(card);
-        });
-      }
-
-      // 3. Lender View Registry Table
-      const regBadge = document.getElementById("registryCountBadge");
-      if (regBadge) {
-        regBadge.textContent = `${portfolioAssets.length || 1} Asset${portfolioAssets.length > 1 ? "s" : ""} Total`;
-      }
-
-      const tableBody = document.getElementById("registryTableBody");
-      if (tableBody) {
-        tableBody.innerHTML = "";
-        const assetsToRender = portfolioAssets.length > 0 ? portfolioAssets : [assetState || { id: "ORD-123", stage: "PO_ISSUED", order_value: 5000000, financial: { drawn: 0, safe_limit: 2430000 }, risk_index: 0.08 }];
-        
-        let totalDeployed = 0;
-        let totalRiskWeighted = 0;
-        let totalVal = 0;
-
-        assetsToRender.forEach(a => {
-          const isSelected = a.id === selectedAssetId;
-          const stage = a.stage || "PO_ISSUED";
-          const fin = a.financial || {};
-          const drawn = fin.drawn || 0;
-          const safe = fin.safe_limit || 0;
-          const orderVal = a.order_value || 5000000;
-          const risk = a.risk_index ?? 0.08;
-
-          totalDeployed += drawn;
-          totalVal += orderVal;
-          totalRiskWeighted += risk * orderVal;
-
-          const baseLtv = STAGE_LTV[stage] || 0;
-          const effLtv = Math.round(baseLtv * (1 - 0.4 * risk) * 100);
-
-          let riskBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">${risk.toFixed(2)}</span>`;
-          if (risk >= 0.6) {
-            riskBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-950/60 text-red-300 border border-red-500/30">${risk.toFixed(2)}</span>`;
-          } else if (risk >= 0.3) {
-            riskBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/60 text-amber-300 border border-amber-500/30">${risk.toFixed(2)}</span>`;
-          }
-
-          const tr = document.createElement("tr");
-          tr.className = `cursor-pointer transition ${
-            isSelected
-              ? "bg-indigo-500/15 border-y border-indigo-500/30 font-bold"
-              : "text-slate-300 hover:bg-white/[0.03]"
-          }`;
-          tr.onclick = () => selectAsset(a.id);
-
-          tr.innerHTML = `
-            <td class="py-3 px-2 flex items-center space-x-2">
-              <span class="font-bold text-white">${a.id}</span>
-              ${isSelected ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold text-emerald-300 bg-emerald-950/70 border border-emerald-500/30">LIVE</span>' : ''}
-            </td>
-            <td class="py-3 px-2">
-              <div class="flex items-center space-x-1.5">
-                <span class="w-2 h-2 rounded-full pulse-dot" style="background: var(--navy);"></span>
-                <span class="font-semibold text-slate-200">${STAGE_NAMES[stage] || stage}</span>
-              </div>
-            </td>
-            <td class="py-3 px-2 text-right font-bold text-white">₹${(orderVal / 100000).toFixed(0)}L</td>
-            <td class="py-3 px-2 text-right font-bold" style="color: var(--mint);">₹${(drawn / 100000).toFixed(1)}L</td>
-            <td class="py-3 px-2 text-right font-bold text-white">${effLtv}%</td>
-            <td class="py-3 px-2 text-center">${riskBadge}</td>
-          `;
-          tableBody.appendChild(tr);
-        });
-
-        // Update Lender KPI Aggregates
-        renderLenderKPIs(totalDeployed, totalVal > 0 ? (totalRiskWeighted / totalVal) : 0.08);
-      }
-    }
-
-    async function selectAsset(id) {
-      if (!id) return;
-      selectedAssetId = id;
-
-      // Reset Predictive Risk Shadow state when asset switches (Requirement: CLEAR previous simulation)
-      if (typeof resetShadowState === "function") {
-        resetShadowState();
-      }
-
-      // Update dropdown
-      const select = document.getElementById("assetSelectDropdown");
-      if (select && select.value !== id) {
-        select.value = id;
-      }
-
-      // Update input placeholder & header labels
-      const askInput = document.getElementById("askTwinInput");
-      if (askInput) askInput.placeholder = `Ask CapitalTwin about ${id}…`;
-
-      const emptyId = document.getElementById("emptyStateAssetId");
-      if (emptyId) emptyId.textContent = id;
-
-      // Reset bot rate displays to standard
-      document.getElementById("auctionSubtitle").textContent = `Bank Battle (3 Bot Lenders) · ${id}`;
-      document.getElementById("acceptOfferContainer").classList.add("hidden");
-      document.getElementById("auctionAmountBadge").classList.add("hidden");
-
-      try {
-        const [assetRes, ledgerRes] = await Promise.all([
-          fetch(`/asset/${id}`),
-          fetch(`/ledger/${id}`)
-        ]);
-
-        if (assetRes.ok) {
-          const aData = await assetRes.json();
-          assetState = aData.asset;
-          fraudBlockedCount = aData.meta?.fraud_blocked || 0;
-          
-          // Store asset in portfolio cache
-          const idx = portfolioAssets.findIndex(a => a.id === id);
-          if (idx >= 0) {
-            portfolioAssets[idx] = assetState;
-          } else {
-            portfolioAssets.push(assetState);
-          }
-
-          renderTwin();
-        }
-
-        if (ledgerRes.ok) {
-          const lData = await ledgerRes.json();
-          ledgerRecords = lData.records || [];
-          renderLedger();
-        }
-
-        renderPortfolioSummary();
-        renderPortfolioSelector();
-
-        // Render feed for this asset if cached
-        renderAgentFeedForAsset(id);
-      } catch (err) {
-        console.error(`Error selecting asset ${id}:`, err);
-        showToast(`Failed to load asset ${id}`, "coral");
-      }
-    }
-
-    function renderAgentFeedForAsset(assetId) {
-      const feed = document.getElementById("agentsFeedList");
-      if (!feed) return;
-      feed.innerHTML = "";
-
-      const msgs = assetFeedMessages[assetId] || [];
-      if (msgs.length === 0) {
-        // Add initial greeting for this asset
-        const welcome = document.createElement("div");
-        welcome.className = "slide-in p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1";
-        welcome.innerHTML = `
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="px-2 py-0.5 rounded-full font-bold uppercase tracking-wider badge-assistant">Assistant</span>
-            <span class="text-slate-500 font-mono text-[10px]">Active</span>
-          </div>
-          <p class="text-xs text-slate-300 font-medium leading-relaxed">CapitalTwin digital twin active for ${assetId}. Monitoring real-time supply chain telemetries & financing capacity.</p>
-        `;
-        feed.appendChild(welcome);
-      } else {
-        msgs.forEach(m => {
-          const item = document.createElement("div");
-          item.className = "slide-in p-3 rounded-xl bg-white/[0.03] border border-white/10 space-y-1";
-          const badgeClass = `badge-${m.agent.toLowerCase()}` || "badge-tracker";
-          item.innerHTML = `
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${badgeClass}">${m.agent}</span>
-              <span class="text-slate-500 font-mono text-[10px]">${m.ts || new Date().toLocaleTimeString()}</span>
-            </div>
-            <p class="text-xs text-slate-300 font-medium leading-relaxed">${m.reason}</p>
-          `;
-          feed.appendChild(item);
-        });
-      }
-    }
-
-    // ==================== SECTION D: ADD ASSET MODAL & CREATION ====================
-    function openAddAssetModal() {
-      const modal = document.getElementById("addAssetModal");
-      const errBox = document.getElementById("addAssetError");
-      errBox.classList.add("hidden");
-      
-      // Auto-generate ID based on count
-      const nextIdNum = 123 + portfolioAssets.length + 1;
-      document.getElementById("newAssetId").value = `ORD-${nextIdNum}`;
-      document.getElementById("newAssetName").value = "";
-      document.getElementById("newOrderValue").value = "4000000";
-
-      modal.classList.remove("hidden");
-    }
-
-    function closeAddAssetModal() {
-      document.getElementById("addAssetModal").classList.add("hidden");
-    }
-
-    async function handleCreateAsset(e) {
-      if (e) e.preventDefault();
-      const id = document.getElementById("newAssetId").value.trim().toUpperCase();
-      const name = document.getElementById("newAssetName").value.trim();
-      const orderValue = parseFloat(document.getElementById("newOrderValue").value);
-      const buyer = document.getElementById("newBuyer").value.trim() || "BigRetail";
-      const terms = document.getElementById("newTerms").value.trim() || "net-60";
-      const owner = document.getElementById("newOwner").value.trim() || "Ravi Textiles";
-      const errBox = document.getElementById("addAssetError");
-      const submitBtn = document.getElementById("createAssetSubmitBtn");
-
-      if (!id || !name || isNaN(orderValue) || orderValue <= 0) {
-        errBox.textContent = "Please fill in all required fields with valid values.";
-        errBox.classList.remove("hidden");
-        return;
-      }
-
-      errBox.classList.add("hidden");
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = "<span>Creating twin...</span>";
-
-      try {
-        const res = await fetch("/asset/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id,
-            name,
-            order_value: orderValue,
-            buyer,
-            terms,
-            owner
-          })
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.ok) {
-          closeAddAssetModal();
-          showToast(`Digital Twin ${id} created successfully!`, "mint");
-          await fetchPortfolio();
-          await selectAsset(id);
-        } else {
-          errBox.textContent = data.why || data.error || "Failed to create digital twin asset.";
-          errBox.classList.remove("hidden");
-        }
-      } catch (err) {
-        errBox.textContent = "Network error connecting to backend.";
-        errBox.classList.remove("hidden");
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = "<span>Create Asset Twin</span>";
-      }
-    }
-
     // ==================== SECTION G: WEBSOCKET & NETWORK ====================
     function initWebSocket() {
       if (ws) return;
@@ -1794,8 +1097,18 @@
 
     async function fetchInitialData() {
       try {
-        await fetchPortfolio();
-        await selectAsset(selectedAssetId || "ORD-123");
+        const [assetRes, ledgerRes] = await Promise.all([
+          fetch("/asset/ORD-123"),
+          fetch("/ledger/ORD-123")
+        ]);
+        if (assetRes.ok) {
+          const aData = await assetRes.json();
+          handleLiveMessage({ kind: "twin_update", asset: aData.asset, meta: aData.meta });
+        }
+        if (ledgerRes.ok) {
+          const lData = await ledgerRes.json();
+          handleLiveMessage({ kind: "ledger_update", records: lData.records });
+        }
       } catch (e) {
         console.error("Fetch initial error", e);
       }
@@ -1803,79 +1116,38 @@
 
     function handleLiveMessage(msg) {
       if (msg.kind === "twin_update") {
-        const msgAssetId = msg.asset_id || msg.asset?.id;
-        
-        // Update portfolio cache
-        if (msg.asset && msgAssetId) {
-          const idx = portfolioAssets.findIndex(a => a.id === msgAssetId);
-          if (idx >= 0) {
-            portfolioAssets[idx] = msg.asset;
-          } else {
-            portfolioAssets.push(msg.asset);
-          }
-          renderPortfolioSummary();
-          renderPortfolioSelector();
+        assetState = msg.asset;
+        if (msg.meta) {
+          fraudBlockedCount = msg.meta.fraud_blocked;
         }
-
-        // Only update current twin view if message is for the active selected asset
-        if (!msgAssetId || msgAssetId === selectedAssetId) {
-          assetState = msg.asset;
-          if (msg.meta) {
-            fraudBlockedCount = msg.meta.fraud_blocked;
-          }
-          renderTwin();
-        }
-      } else if (msg.kind === "portfolio_update") {
-        fetchPortfolio();
+        renderTwin();
       } else if (msg.kind === "agent_message") {
-        const msgAssetId = msg.asset_id || selectedAssetId;
+        addAgentMessage(msg.agent, msg.reason, msg.ts);
         
-        if (!assetFeedMessages[msgAssetId]) {
-          assetFeedMessages[msgAssetId] = [];
-        }
-        assetFeedMessages[msgAssetId].unshift({ agent: msg.agent, reason: msg.reason, ts: msg.ts });
-        if (assetFeedMessages[msgAssetId].length > 25) {
-          assetFeedMessages[msgAssetId].pop();
+        // Blocked check -> Shake full-width banner
+        if (msg.reason && msg.reason.includes("BLOCKED")) {
+          showFraudBanner(msg.reason);
         }
 
-        // Only display in active feed if matching selected asset
-        if (!msg.asset_id || msg.asset_id === selectedAssetId) {
-          addAgentMessage(msg.agent, msg.reason, msg.ts);
-          
-          // Blocked check -> Shake full-width banner
-          if (msg.reason && msg.reason.includes("BLOCKED")) {
-            showFraudBanner(msg.reason);
-          }
+        // Settled itself check -> Confetti
+        if (msg.reason && msg.reason.includes("settled itself")) {
+          launchConfetti();
+          showToast("Loan settled itself via smart escrow", "mint");
+        }
 
-          // Settled itself check -> Confetti
-          if (msg.reason && msg.reason.includes("settled itself")) {
-            launchConfetti();
-            showToast("Loan settled itself via smart escrow", "mint");
-          }
-
-          // Voice TTS
-          if (["Risk", "Fraud", "Assistant"].includes(msg.agent)) {
-            speak(msg.reason);
-          }
+        // Voice TTS
+        if (["Risk", "Fraud", "Assistant"].includes(msg.agent)) {
+          speak(msg.reason);
         }
       } else if (msg.kind === "auction_start") {
-        if (!msg.asset_id || msg.asset_id === selectedAssetId) {
-          onAuctionStart(msg.amount);
-        }
+        onAuctionStart(msg.amount);
       } else if (msg.kind === "bid") {
-        if (!msg.asset_id || msg.asset_id === selectedAssetId) {
-          onAuctionBid(msg.lender, msg.rate);
-        }
+        onAuctionBid(msg.lender, msg.rate);
       } else if (msg.kind === "auction_end") {
-        if (!msg.asset_id || msg.asset_id === selectedAssetId) {
-          onAuctionEnd(msg.best, msg.amount);
-        }
+        onAuctionEnd(msg.best, msg.amount);
       } else if (msg.kind === "ledger_update") {
-        const msgAssetId = msg.asset_id || selectedAssetId;
-        if (!msg.asset_id || msg.asset_id === selectedAssetId) {
-          ledgerRecords = msg.records || [];
-          renderLedger();
-        }
+        ledgerRecords = msg.records || [];
+        renderLedger();
       }
     }
 
@@ -1895,16 +1167,6 @@
         adminInitBtn.classList.toggle("hidden", currentUser?.role !== "admin");
       }
 
-      // Update ID displays in top card
-      const idEl = document.getElementById("twinIdDisplay");
-      if (idEl) idEl.textContent = assetState.id || selectedAssetId;
-      
-      const descEl = document.getElementById("twinDescDisplay");
-      if (descEl) {
-        const valLakhs = assetState.order_value ? (assetState.order_value / 100000).toFixed(0) : "50";
-        descEl.textContent = `${assetState.name || "Goods Order"} · ₹${valLakhs}L`;
-      }
-
       if (isNew) return;
 
       const fin = assetState.financial || {};
@@ -1912,7 +1174,7 @@
       const cont = assetState.contractual || {};
       const safeLimit = fin.safe_limit || 0;
       const drawn = fin.drawn || 0;
-      const risk = assetState.risk_index ?? 0.08;
+      const risk = assetState.risk_index || 0.08;
 
       // Available Financing Count-up
       animateValue("safeLimitHuge", prevSafeLimit, safeLimit, 600, (v) => "₹" + formatIndian(v));
@@ -1957,6 +1219,17 @@
 
       // Update Chart
       updateChart(stage, risk, drawn);
+
+      // Update Lender View KPIs
+      renderLenderKPIs(drawn, risk);
+
+      // Update Registry Table
+      document.getElementById("tableLiveStage").textContent = stage;
+      document.getElementById("tableLiveDrawn").textContent = `₹${(drawn / 100000).toFixed(1)}L`;
+      const baseLtv = STAGE_LTV[stage] || 0;
+      const effLtv = Math.round(baseLtv * (1 - 0.4 * risk) * 100);
+      document.getElementById("tableLiveLtv").textContent = `${effLtv}%`;
+      renderRiskGauge(risk, "tableLiveRiskGauge");
 
       // Update Autopilot label
       updateAutopilotLabel();
@@ -2132,7 +1405,6 @@
       if (!chartInstance) return;
 
       const orderVal = assetState?.order_value || 5000000;
-      const orderLakhs = orderVal / 100000;
       const currIdx = STAGE_ORDER.indexOf(currentStage);
 
       const curveData = STAGE_ORDER.map((st) => {
@@ -2145,16 +1417,9 @@
       const pointRadii = STAGE_ORDER.map((st, i) => i === currIdx ? 8 : 4);
       const pointBg = STAGE_ORDER.map((st, i) => i === currIdx ? "#818cf8" : "#02C39A");
 
-      // Update ceiling dataset
-      chartInstance.data.datasets[0].data = STAGE_ORDER.map(() => orderLakhs);
-      
-      // Update safe capacity curve
       chartInstance.data.datasets[1].data = curveData;
       chartInstance.data.datasets[1].pointRadius = pointRadii;
       chartInstance.data.datasets[1].pointBackgroundColor = pointBg;
-      
-      // Adjust y max dynamically if larger asset
-      chartInstance.options.scales.y.max = Math.ceil(orderLakhs * 1.2 / 10) * 10;
       chartInstance.update();
     }
 
@@ -2198,7 +1463,7 @@
         const res = await fetch("/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId, q, question: q })
+          body: JSON.stringify({ q })
         });
         const data = await res.json();
         pendingCard.remove();
@@ -2212,14 +1477,14 @@
     }
 
     async function askStageExplanation(stageName) {
-      const q = `Explain what happens to my financing at the ${stageName} stage for ${selectedAssetId}.`;
+      const q = `Explain what happens to my financing at the ${stageName} stage.`;
       const pendingCard = createPendingAgentCard("Assistant");
 
       try {
         const res = await fetch("/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId, q, question: q })
+          body: JSON.stringify({ q })
         });
         const data = await res.json();
         pendingCard.remove();
@@ -2263,12 +1528,12 @@
         const res = await fetch("/financing/request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId, amount })
+          body: JSON.stringify({ asset_id: "ORD-123", amount })
         });
         const data = await res.json();
 
         if (res.ok) {
-          showToast(`Financing requested: ₹${amount.toLocaleString("en-IN")} on ${selectedAssetId}. Bank battle opened!`, "mint");
+          showToast(`Financing requested: ₹${amount.toLocaleString("en-IN")}. Bank battle opened!`, "mint");
           input.value = "";
           if (currentUser?.role === "admin") {
             switchView("lender");
@@ -2287,7 +1552,7 @@
       badge.textContent = `Financing: ₹${amount.toLocaleString("en-IN")}`;
       badge.classList.remove("hidden");
 
-      document.getElementById("auctionSubtitle").textContent = `Bank Battle Active (${selectedAssetId}) — Lenders cutting interest rates in real-time...`;
+      document.getElementById("auctionSubtitle").textContent = "Bank Battle Active — Lenders cutting interest rates in real-time...";
       document.getElementById("acceptOfferContainer").classList.add("hidden");
 
       // Reset bot rate displays
@@ -2319,7 +1584,7 @@
     }
 
     function onAuctionEnd(best, amount) {
-      document.getElementById("auctionSubtitle").textContent = `Auction Concluded (${selectedAssetId}) — Winner: ${best.lender} @ ${best.rate.toFixed(2)}%`;
+      document.getElementById("auctionSubtitle").textContent = `Auction Concluded — Winner: ${best.lender} @ ${best.rate.toFixed(2)}%`;
       
       let bestKey = "Cautious";
       if (best.lender.includes("Aggressive")) bestKey = "Aggressive";
@@ -2350,12 +1615,11 @@
       try {
         const res = await fetch("/financing/accept", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId })
+          headers: { "Content-Type": "application/json" }
         });
         const data = await res.json();
         if (res.ok) {
-          showToast(`Disbursed ₹${data.amount.toLocaleString("en-IN")} for ${selectedAssetId} via ${data.lender}!`, "mint");
+          showToast(`Disbursed ₹${data.amount.toLocaleString("en-IN")} via ${data.lender}!`, "mint");
           document.getElementById("acceptOfferContainer").classList.add("hidden");
         }
       } catch {
@@ -2370,11 +1634,6 @@
       container.innerHTML = "";
 
       const reversed = [...ledgerRecords].reverse();
-
-      if (reversed.length === 0) {
-        container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400 italic">No blockchain ledger transactions for ${selectedAssetId} yet.</div>`;
-        return;
-      }
 
       reversed.forEach((rec) => {
         const isFin = rec.type === "financing";
@@ -2400,7 +1659,6 @@
             <span>${rec.ts}</span>
           </div>
           <div class="expand-details hidden pt-2 border-t border-white/10 text-[10px] font-mono text-slate-300 space-y-1">
-            <p><strong>Asset ID:</strong> ${rec.asset_id || selectedAssetId}</p>
             <p><strong>Type:</strong> ${rec.type} (${rec.note || "—"})</p>
             <p class="truncate text-slate-400"><strong>Prev Hash:</strong> ${rec.prev_hash}</p>
             <p class="truncate text-slate-400"><strong>Hash:</strong> ${rec.hash}</p>
@@ -2422,14 +1680,14 @@
       content.innerHTML = "";
 
       if (ledgerRecords.length === 0) {
-        content.innerHTML = `<p class='text-slate-400 text-center py-6'>No ledger entries recorded for ${selectedAssetId} yet.</p>`;
+        content.innerHTML = "<p class='text-slate-400 text-center py-6'>No ledger entries recorded yet.</p>";
       } else {
         ledgerRecords.forEach((r, idx) => {
           const card = document.createElement("div");
           card.className = "p-3.5 bg-white/5 border border-white/10 rounded-xl space-y-1";
           card.innerHTML = `
             <div class="flex items-center justify-between font-bold text-white">
-              <span>Block #${idx + 1} — ${r.type.toUpperCase()} (${r.asset_id || selectedAssetId})</span>
+              <span>Block #${idx + 1} — ${r.type.toUpperCase()}</span>
               <span class="text-emerald-400">₹${r.amount.toLocaleString("en-IN")}</span>
             </div>
             <p class="text-slate-300"><strong>Lender:</strong> ${r.lender} | <strong>Note:</strong> ${r.note || "—"}</p>
@@ -2458,13 +1716,13 @@
         const res = await fetch("/event", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId, type })
+          body: JSON.stringify({ asset_id: "ORD-123", type })
         });
         const data = await res.json();
         if (data.blocked) {
-          showToast(`Event Blocked on ${selectedAssetId}: ${data.reason}`, "coral");
+          showToast(`Event Blocked: ${data.reason}`, "coral");
         } else {
-          showToast(`Event fired for ${selectedAssetId}: ${type}`, "navy");
+          showToast(`Event fired: ${type}`, "navy");
         }
       } catch {
         showToast(`Failed to trigger ${type}`, "coral");
@@ -2485,17 +1743,11 @@
 
     async function handleReset() {
       try {
-        const res = await fetch("/reset", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId })
-        });
+        const res = await fetch("/reset", { method: "POST" });
         if (res.ok) {
-          showToast(`Asset ${selectedAssetId} reset — fresh digital twin initialized.`, "navy");
+          showToast("Demo reset — fresh digital twin initialized.", "navy");
           autopilotIndex = 0;
           updateAutopilotLabel();
-          await fetchPortfolio();
-          await selectAsset(selectedAssetId);
         }
       } catch {
         showToast("Reset failed", "coral");
@@ -2509,7 +1761,7 @@
         label.textContent = "Demo complete — Reset to run again";
       } else {
         const step = AUTOPILOT_STEPS[autopilotIndex];
-        label.textContent = `▶ Next: ${step.name} (${selectedAssetId}) — Step ${autopilotIndex + 1}/11`;
+        label.textContent = `▶ Next: ${step.name} — Step ${autopilotIndex + 1}/11`;
       }
     }
 
@@ -2533,16 +1785,16 @@
         await fetch("/financing/request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ asset_id: selectedAssetId, amount: safe })
+          body: JSON.stringify({ asset_id: "ORD-123", amount: safe })
         });
-        showToast(`Autopilot: Requested ₹${safe.toLocaleString("en-IN")} financing for ${selectedAssetId}`, "mint");
+        showToast(`Autopilot: Requested ₹${safe.toLocaleString("en-IN")} financing`, "mint");
         autopilotIndex++;
         spinner.classList.add("hidden");
         updateAutopilotLabel();
       } else if (step.type === "financing_accept") {
         // Wait for auction to finish if in progress
         waitingForAuction = true;
-        showToast(`Autopilot: Waiting for Bank Battle auction to complete for ${selectedAssetId}...`, "navy");
+        showToast("Autopilot: Waiting for Bank Battle auction to complete...", "navy");
         // Handled in onAuctionEnd
         autopilotIndex++;
         spinner.classList.add("hidden");
@@ -2702,429 +1954,6 @@
     function formatIndian(val) {
       if (val === 0) return "0";
       return val.toLocaleString("en-IN");
-    }
-
-    // =======================================================
-    // SECTION G: PREDICTIVE RISK SHADOW JAVASCRIPT ENGINE
-    // =======================================================
-    const shadowState = {
-      selectedPreset: null,
-      delay_days_delta: 0,
-      temperature_delta: 0,
-      buyer_risk_delta: 0,
-      stage_override: null,
-      condition_override: null,
-      isSimulating: false,
-      lastResult: null
-    };
-
-    const SHADOW_PRESETS = {
-      DELAY_3D: {
-        name: "3-Day Shipment Delay",
-        delay_days_delta: 3,
-        temperature_delta: 0,
-        buyer_risk_delta: 0,
-        stage_override: null,
-        condition_override: null,
-        buttonId: "btnPresetDelay3"
-      },
-      DELAY_7D: {
-        name: "7-Day Transit Bottleneck",
-        delay_days_delta: 7,
-        temperature_delta: 0,
-        buyer_risk_delta: 0,
-        stage_override: null,
-        condition_override: null,
-        buttonId: "btnPresetDelay7"
-      },
-      TEMP_SPIKE: {
-        name: "Container Temp Spike (+5°C)",
-        delay_days_delta: 0,
-        temperature_delta: 5,
-        buyer_risk_delta: 0,
-        stage_override: null,
-        condition_override: "DEGRADED (heat)",
-        buttonId: "btnPresetTemp"
-      },
-      BUYER_RISK: {
-        name: "Buyer Rating Downgrade (+0.30)",
-        delay_days_delta: 0,
-        temperature_delta: 0,
-        buyer_risk_delta: 0.30,
-        stage_override: null,
-        condition_override: null,
-        buttonId: "btnPresetBuyer"
-      },
-      CRISIS_SHOCK: {
-        name: "Compound Multi-Point Shock (Delay + Heat + Downgrade)",
-        delay_days_delta: 5,
-        temperature_delta: 6,
-        buyer_risk_delta: 0.25,
-        stage_override: null,
-        condition_override: "DEGRADED (heat)",
-        buttonId: "btnPresetCrisis"
-      }
-    };
-
-    function updateShadowInputsUI() {
-      const delayEl = document.getElementById("shadowInputDelay");
-      if (delayEl) {
-        const sign = shadowState.delay_days_delta > 0 ? "+" : "";
-        delayEl.textContent = `${sign}${shadowState.delay_days_delta} d`;
-      }
-
-      const tempEl = document.getElementById("shadowInputTemp");
-      if (tempEl) {
-        const sign = shadowState.temperature_delta > 0 ? "+" : "";
-        tempEl.textContent = `${sign}${shadowState.temperature_delta}°C`;
-      }
-
-      const buyerEl = document.getElementById("shadowInputBuyerRisk");
-      if (buyerEl) {
-        const sign = shadowState.buyer_risk_delta > 0 ? "+" : "";
-        buyerEl.textContent = `${sign}${shadowState.buyer_risk_delta.toFixed(2)}`;
-      }
-
-      const stageEl = document.getElementById("shadowInputStage");
-      if (stageEl) {
-        stageEl.value = shadowState.stage_override || "";
-      }
-    }
-
-    function applyShadowPreset(presetKey) {
-      const preset = SHADOW_PRESETS[presetKey];
-      if (!preset) return;
-
-      hideShadowError();
-      shadowState.selectedPreset = presetKey;
-      shadowState.delay_days_delta = preset.delay_days_delta;
-      shadowState.temperature_delta = preset.temperature_delta;
-      shadowState.buyer_risk_delta = preset.buyer_risk_delta;
-      shadowState.stage_override = preset.stage_override;
-      shadowState.condition_override = preset.condition_override;
-
-      // Update button highlights
-      Object.keys(SHADOW_PRESETS).forEach(k => {
-        const btn = document.getElementById(SHADOW_PRESETS[k].buttonId);
-        if (btn) {
-          if (k === presetKey) {
-            btn.classList.add("active-preset");
-          } else {
-            btn.classList.remove("active-preset");
-          }
-        }
-      });
-
-      updateShadowInputsUI();
-    }
-
-    function adjustShadowControl(type, delta) {
-      hideShadowError();
-      
-      // Clear preset button active highlight when user manually adjusts steppers
-      shadowState.selectedPreset = null;
-      Object.keys(SHADOW_PRESETS).forEach(k => {
-        const btn = document.getElementById(SHADOW_PRESETS[k].buttonId);
-        if (btn) btn.classList.remove("active-preset");
-      });
-
-      if (type === "delay") {
-        shadowState.delay_days_delta = Math.max(-10, Math.min(30, shadowState.delay_days_delta + delta));
-      } else if (type === "temp") {
-        shadowState.temperature_delta = Math.max(-10, Math.min(25, shadowState.temperature_delta + delta));
-        if (shadowState.temperature_delta >= 4) {
-          shadowState.condition_override = "DEGRADED (heat)";
-        } else {
-          shadowState.condition_override = null;
-        }
-      } else if (type === "buyerRisk") {
-        const newVal = Math.round((shadowState.buyer_risk_delta + delta) * 100) / 100;
-        shadowState.buyer_risk_delta = Math.max(-0.50, Math.min(0.85, newVal));
-      }
-
-      updateShadowInputsUI();
-    }
-
-    function onShadowStageChanged(stageVal) {
-      hideShadowError();
-      shadowState.stage_override = stageVal || null;
-      shadowState.selectedPreset = null;
-      Object.keys(SHADOW_PRESETS).forEach(k => {
-        const btn = document.getElementById(SHADOW_PRESETS[k].buttonId);
-        if (btn) btn.classList.remove("active-preset");
-      });
-    }
-
-    function resetShadowControls() {
-      shadowState.selectedPreset = null;
-      shadowState.delay_days_delta = 0;
-      shadowState.temperature_delta = 0;
-      shadowState.buyer_risk_delta = 0;
-      shadowState.stage_override = null;
-      shadowState.condition_override = null;
-
-      Object.keys(SHADOW_PRESETS).forEach(k => {
-        const btn = document.getElementById(SHADOW_PRESETS[k].buttonId);
-        if (btn) btn.classList.remove("active-preset");
-      });
-
-      updateShadowInputsUI();
-      hideShadowError();
-    }
-
-    function resetShadowState() {
-      resetShadowControls();
-      shadowState.lastResult = null;
-
-      const emptyState = document.getElementById("shadowResultEmptyState");
-      const resultContent = document.getElementById("shadowResultContent");
-      if (emptyState) emptyState.classList.remove("hidden");
-      if (resultContent) resultContent.classList.add("hidden");
-
-      const badge = document.getElementById("shadowTargetAssetBadge");
-      if (badge) badge.textContent = selectedAssetId || "ORD-123";
-    }
-
-    function hideShadowError() {
-      const banner = document.getElementById("shadowErrorBanner");
-      if (banner) banner.classList.add("hidden");
-    }
-
-    function showShadowError(msg) {
-      const banner = document.getElementById("shadowErrorBanner");
-      const text = document.getElementById("shadowErrorMessage");
-      if (banner && text) {
-        text.textContent = msg || "An error occurred during simulation.";
-        banner.classList.remove("hidden");
-      }
-    }
-
-    async function executeShadowSimulation() {
-      if (shadowState.isSimulating) return;
-
-      const targetAssetId = selectedAssetId;
-      if (!targetAssetId) {
-        showShadowError("No asset selected to simulate.");
-        return;
-      }
-
-      const runBtn = document.getElementById("btnRunSimulation");
-      shadowState.isSimulating = true;
-      hideShadowError();
-
-      if (runBtn) {
-        runBtn.disabled = true;
-        runBtn.innerHTML = `
-          <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>Simulating Hypothetical Twin...</span>
-        `;
-      }
-
-      const scenarioName = shadowState.selectedPreset
-        ? (SHADOW_PRESETS[shadowState.selectedPreset]?.name || "Preset Scenario")
-        : "Custom Stress Scenario";
-
-      const payload = {
-        asset_id: targetAssetId,
-        scenario: {
-          scenario_name: scenarioName,
-          delay_days_delta: shadowState.delay_days_delta,
-          temperature_delta: shadowState.temperature_delta,
-          buyer_risk_delta: shadowState.buyer_risk_delta,
-          ...(shadowState.stage_override ? { stage_override: shadowState.stage_override } : {}),
-          ...(shadowState.condition_override ? { condition_override: shadowState.condition_override } : {})
-        }
-      };
-
-      try {
-        const res = await fetch("/shadow/simulate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-
-        // Race condition protection: Discard if asset changed while awaiting request
-        if (targetAssetId !== selectedAssetId || (data.simulation && data.simulation.asset_id !== selectedAssetId)) {
-          console.warn("Discarded stale simulation result for", targetAssetId, "current is", selectedAssetId);
-          return;
-        }
-
-        if (res.ok && data.simulation) {
-          renderShadowSimulationResult(data.simulation);
-        } else {
-          showShadowError(data.error || "Simulation rejected by engine.");
-        }
-      } catch (err) {
-        console.error("Simulation error:", err);
-        showShadowError("Failed to connect to simulation engine.");
-      } finally {
-        shadowState.isSimulating = false;
-        if (runBtn) {
-          runBtn.disabled = false;
-          runBtn.innerHTML = `<span>⚡ Run Predictive Simulation</span>`;
-        }
-      }
-    }
-
-    function renderShadowSimulationResult(sim) {
-      if (!sim) return;
-      shadowState.lastResult = sim;
-
-      const emptyState = document.getElementById("shadowResultEmptyState");
-      const resultContent = document.getElementById("shadowResultContent");
-      if (emptyState) emptyState.classList.add("hidden");
-      if (resultContent) resultContent.classList.remove("hidden");
-
-      // Scenario Name
-      const nameEl = document.getElementById("shadowResultScenarioName");
-      if (nameEl) nameEl.textContent = sim.scenario_name || "Predictive Scenario";
-
-      // Status Badge
-      const statusBadge = document.getElementById("shadowResultStatusBadge");
-      if (statusBadge) {
-        statusBadge.className = "px-3 py-1 rounded-full text-xs font-mono font-bold transition-all";
-        if (sim.predicted.is_drawdown_frozen) {
-          statusBadge.textContent = "PROJECTED DRAWDOWN FREEZE";
-          statusBadge.classList.add("bg-red-950/90", "border", "border-red-500/80", "text-red-300", "shadow-freeze-warning");
-        } else if (sim.delta.capacity_delta < -10000 || sim.delta.risk_index_delta > 0.05) {
-          statusBadge.textContent = "CAPACITY REDUCED";
-          statusBadge.classList.add("bg-amber-950/70", "border", "border-amber-500/50", "text-amber-300");
-        } else {
-          statusBadge.textContent = "HEADROOM STABLE";
-          statusBadge.classList.add("bg-emerald-950/70", "border", "border-emerald-500/40", "text-emerald-300");
-        }
-      }
-
-      // Format currency helper
-      const fmtInr = (n) => `₹${Math.round(n).toLocaleString("en-IN")}`;
-      const fmtDeltaInr = (n) => {
-        const rounded = Math.round(n);
-        if (rounded === 0) return "₹0";
-        const sign = rounded > 0 ? "+" : "-";
-        return `${sign}₹${Math.abs(rounded).toLocaleString("en-IN")}`;
-      };
-
-      // 1. Risk Index
-      document.getElementById("shadowBaseRisk").textContent = sim.baseline.risk_index.toFixed(2);
-      document.getElementById("shadowPredRisk").textContent = sim.predicted.risk_index.toFixed(2);
-      const deltaRiskEl = document.getElementById("shadowDeltaRisk");
-      const dRisk = sim.delta.risk_index_delta;
-      deltaRiskEl.textContent = `${dRisk >= 0 ? "+" : ""}${dRisk.toFixed(2)}`;
-      deltaRiskEl.className = `py-2 px-2 text-right font-bold ${dRisk > 0.02 ? "text-red-400" : dRisk < -0.02 ? "text-emerald-400" : "text-slate-400"}`;
-
-      // 2. Effective LTV
-      document.getElementById("shadowBaseLtv").textContent = `${sim.baseline.effective_ltv_percent.toFixed(1)}%`;
-      document.getElementById("shadowPredLtv").textContent = `${sim.predicted.effective_ltv_percent.toFixed(1)}%`;
-      const deltaLtvEl = document.getElementById("shadowDeltaLtv");
-      const dLtv = sim.predicted.effective_ltv_percent - sim.baseline.effective_ltv_percent;
-      deltaLtvEl.textContent = `${dLtv >= 0 ? "+" : ""}${dLtv.toFixed(1)}%`;
-      deltaLtvEl.className = `py-2 px-2 text-right font-bold ${dLtv < -0.1 ? "text-amber-400" : dLtv > 0.1 ? "text-emerald-400" : "text-slate-400"}`;
-
-      // 3. Safe Credit Capacity
-      document.getElementById("shadowBaseCapacity").textContent = fmtInr(sim.baseline.capacity);
-      document.getElementById("shadowPredCapacity").textContent = fmtInr(sim.predicted.capacity);
-      const deltaCapEl = document.getElementById("shadowDeltaCapacity");
-      deltaCapEl.textContent = fmtDeltaInr(sim.delta.capacity_delta);
-      deltaCapEl.className = `py-2 px-2 text-right font-bold ${sim.delta.capacity_delta < -100 ? "text-amber-400" : sim.delta.capacity_delta > 100 ? "text-emerald-400" : "text-slate-400"}`;
-
-      // 4. Available Headroom
-      document.getElementById("shadowBaseHeadroom").textContent = fmtInr(sim.baseline.available_headroom);
-      document.getElementById("shadowPredHeadroom").textContent = fmtInr(sim.predicted.available_headroom);
-      const deltaHeadEl = document.getElementById("shadowDeltaHeadroom");
-      deltaHeadEl.textContent = fmtDeltaInr(sim.delta.headroom_delta);
-      deltaHeadEl.className = `py-2 px-2 text-right font-bold ${sim.delta.headroom_delta < -100 ? "text-red-400" : sim.delta.headroom_delta > 100 ? "text-emerald-400" : "text-slate-400"}`;
-
-      // 5. Drawn Debt
-      document.getElementById("shadowBaseDrawn").textContent = fmtInr(sim.baseline.drawn);
-      document.getElementById("shadowPredDrawn").textContent = fmtInr(sim.predicted.drawn);
-
-      // 6. Drawdown Lock Status
-      const baseFrozenEl = document.getElementById("shadowBaseFrozen");
-      const predFrozenEl = document.getElementById("shadowBaseFrozen");
-      const deltaFrozenEl = document.getElementById("shadowDeltaFrozen");
-      
-      baseFrozenEl.textContent = sim.baseline.is_drawdown_frozen ? "FROZEN 🛑" : "ACTIVE ✓";
-      baseFrozenEl.className = `py-2 px-2 text-right font-bold ${sim.baseline.is_drawdown_frozen ? "text-red-400" : "text-emerald-400"}`;
-      
-      const predFroz = document.getElementById("shadowPredFrozen");
-      predFroz.textContent = sim.predicted.is_drawdown_frozen ? "FROZEN 🛑" : "ACTIVE ✓";
-      predFroz.className = `py-2 px-2 text-right font-bold ${sim.predicted.is_drawdown_frozen ? "text-red-400" : "text-emerald-400"}`;
-
-      if (sim.predicted.is_drawdown_frozen !== sim.baseline.is_drawdown_frozen) {
-        deltaFrozenEl.textContent = sim.predicted.is_drawdown_frozen ? "Locked (Drawdown Frozen)" : "Unlocked";
-        deltaFrozenEl.className = "py-2 px-2 text-right font-bold text-red-400";
-      } else {
-        deltaFrozenEl.textContent = "No Change";
-        deltaFrozenEl.className = "py-2 px-2 text-right font-sans text-slate-400";
-      }
-
-      // 7. Meta / Stage / Condition / Buyer
-      document.getElementById("shadowBaseMeta").textContent = `${sim.baseline.condition} · ${sim.baseline.delay_days}d · ${sim.baseline.buyer_risk.toFixed(2)}`;
-      document.getElementById("shadowPredMeta").textContent = `${sim.predicted.condition} · ${sim.predicted.delay_days}d · ${sim.predicted.buyer_risk.toFixed(2)}`;
-      
-      const metaDeltaArr = [];
-      if (sim.delta.delay_days_delta !== 0) metaDeltaArr.push(`${sim.delta.delay_days_delta > 0 ? "+" : ""}${sim.delta.delay_days_delta}d delay`);
-      if (sim.delta.temperature_delta !== 0) metaDeltaArr.push(`${sim.delta.temperature_delta > 0 ? "+" : ""}${sim.delta.temperature_delta}°C`);
-      if (Math.abs(sim.delta.buyer_risk_delta) > 0.001) metaDeltaArr.push(`${sim.delta.buyer_risk_delta > 0 ? "+" : ""}${sim.delta.buyer_risk_delta.toFixed(2)} buyer`);
-      if (sim.baseline.stage !== sim.predicted.stage) metaDeltaArr.push(`Stage -> ${sim.predicted.stage}`);
-      
-      document.getElementById("shadowDeltaMeta").textContent = metaDeltaArr.length > 0 ? metaDeltaArr.join(", ") : "No Change";
-
-      // 8. Dynamic Capacity Compression Bar using Actual Selected Asset Order Value
-      const orderVal = Number(sim.order_value) || (assetState && Number(assetState.order_value)) || 5000000;
-      const drawn = Math.max(0, Number(sim.predicted.drawn) || 0);
-      const cap = Math.max(0, Number(sim.predicted.capacity) || 0);
-      const headroom = Math.max(0, cap - drawn);
-
-      const drawnPct = Math.min(100, Math.max(0, (drawn / orderVal) * 100));
-      const headroomPct = Math.min(100 - drawnPct, Math.max(0, (headroom / orderVal) * 100));
-      const haircutPct = Math.max(0, 100 - (drawnPct + headroomPct));
-
-      const drawnBar = document.getElementById("shadowDrawnBar");
-      const headroomBar = document.getElementById("shadowHeadroomBar");
-      const haircutBar = document.getElementById("shadowHaircutBar");
-
-      if (drawnBar) drawnBar.style.width = `${drawnPct}%`;
-      if (headroomBar) headroomBar.style.width = `${headroomPct}%`;
-      if (haircutBar) haircutBar.style.width = `${haircutPct}%`;
-
-      document.getElementById("shadowBarDrawnText").textContent = fmtInr(drawn);
-      document.getElementById("shadowBarCapText").textContent = fmtInr(cap);
-      document.getElementById("shadowBarOrderText").textContent = fmtInr(orderVal);
-
-      const cushionText = document.getElementById("shadowCushionPercent");
-      if (cushionText) {
-        if (sim.predicted.is_drawdown_frozen) {
-          cushionText.textContent = `0% Headroom (Deficit ${fmtInr(Math.abs(sim.predicted.available_headroom))})`;
-          cushionText.className = "font-mono text-red-400 font-bold";
-        } else {
-          const pct = Math.round((headroom / orderVal) * 100);
-          cushionText.textContent = `${pct}% Cushion (${fmtInr(headroom)} Available)`;
-          cushionText.className = "font-mono text-cyan-300 font-bold";
-        }
-      }
-
-      // 9. Warnings List (Safe rendering via textContent)
-      const warnContainer = document.getElementById("shadowWarningsContainer");
-      const warnList = document.getElementById("shadowWarningsList");
-      if (warnContainer && warnList) {
-        if (Array.isArray(sim.warnings) && sim.warnings.length > 0) {
-          warnList.innerHTML = "";
-          sim.warnings.forEach(w => {
-            const li = document.createElement("li");
-            li.textContent = w;
-            warnList.appendChild(li);
-          });
-          warnContainer.classList.remove("hidden");
-        } else {
-          warnContainer.classList.add("hidden");
-        }
-      }
     }
   </script>
 </body>

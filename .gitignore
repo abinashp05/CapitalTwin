@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local SQLite database — never commit
+data/
+*.db
+*.db-wal
+*.db-shm

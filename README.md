@@ -51,9 +51,9 @@ Lenders compete downward in real-time over WebSockets until the lowest interest 
 
 | Role | Username | Password | Purpose |
 | :--- | :--- | :--- | :--- |
-| **Supplier** | `ravi` | `demo123` | Drawdown requests, available safe limits, lifecycle timeline, AI chat, dynamic chart. |
-| **Lender** | `lender` | `demo123` | Portfolio analytics, 5-asset registry, live Bank Battle auction, cryptographic ledger. |
-| **Admin** | `admin` | `demo123` | Control Room simulation triggers, sensor anomalies, fraud attempts, demo reset. |
+| **Supplier** | `ravi123` | `RaviSecure!2026` | Drawdown requests, available safe limits, lifecycle timeline, AI chat, dynamic chart. |
+| **Lender** | `lender01` | `LenderAlpha#2026` | Portfolio analytics, asset registry, live Bank Battle auction, cryptographic ledger. |
+| **Admin** | `admin2026` | `AdminMaster$2026` | Control Room simulation triggers, sensor anomalies, fraud attempts, demo reset. |
 
 ---
 

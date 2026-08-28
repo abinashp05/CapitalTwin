@@ -1,5 +1,7 @@
 import crypto from "crypto";
+// @ts-ignore
 import { AssetRecord } from "../db/repositories/assetRepository";
+// @ts-ignore
 import { effectiveLtv } from "../state/assetRuntime";
 
 export interface LedgerBlock {
@@ -26,7 +28,16 @@ export function createLedgerBlock(
   amount: number,
   note = ""
 ): LedgerBlock {
-  const prev_hash = ledger.length > 0 ? ledger[ledger.length - 1].hash : "GENESIS";
+  // Chain per-asset: each block links to the previous block OF THE SAME ASSET.
+  // This keeps every asset's chain independently verifiable, so clearing or
+  // resetting one asset can never invalidate another asset's chain.
+  let prev_hash = "GENESIS";
+  for (let i = ledger.length - 1; i >= 0; i--) {
+    if (ledger[i].asset_id === asset_id) {
+      prev_hash = ledger[i].hash;
+      break;
+    }
+  }
   const ts = getNowTimestamp();
   const amt = Math.floor(amount);
   const raw = `${prev_hash}${asset_id}${type}${lender}${amt}${ts}`;
@@ -46,13 +57,15 @@ export function createLedgerBlock(
 
 export function verifyLedgerChain(records: LedgerBlock[]): boolean {
   if (records.length === 0) return true;
-  for (let i = 0; i < records.length; i++) {
-    const rec = records[i];
-    const expected_prev = i > 0 ? records[i - 1].hash : "GENESIS";
+  // Verify each asset's chain independently (blocks are chained per-asset).
+  const lastHashByAsset = new Map<string, string>();
+  for (const rec of records) {
+    const expected_prev = lastHashByAsset.get(rec.asset_id) || "GENESIS";
     if (rec.prev_hash !== expected_prev) return false;
     const raw = `${rec.prev_hash}${rec.asset_id}${rec.type}${rec.lender}${rec.amount}${rec.ts}`;
     const computed = crypto.createHash("sha256").update(raw, "utf8").digest("hex");
     if (rec.hash !== computed) return false;
+    lastHashByAsset.set(rec.asset_id, rec.hash);
   }
   return true;
 }
