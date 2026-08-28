@@ -321,39 +321,53 @@ async function runAgentEvents(asset: typeof ASSET, eventType: string) {
   const safe_str = safe_lim.toLocaleString("en-IN");
 
   if (eventType === "ORDER_CONFIRMED") {
-    await pushMsg("Tracker", "Order confirmed for 10,000 t-shirts by BigRetail. Title registered to Ravi Textiles.");
-    await pushMsg("Risk", `Initial baseline risk assessed at ${risk.toFixed(2)}. Buyer BigRetail credit rating rated AA.`);
-    await pushMsg("Loan", `Safe financing headroom established at ₹${safe_str} (50% LTV). Available for PO drawdown.`);
+    await pushMsg("Tracker", "[ERP→PO Confirmed] Order ORD-123 verified: 10,000 t-shirts × ₹500 = ₹50L. Title registered to Ravi Textiles.");
+    await pushMsg("Risk", "[Account Aggregator] Buyer BigRetail credit score: AA. Baseline risk index set at " + risk.toFixed(2) + ".");
+    await pushMsg("Loan", "[Loan Engine] PO financing unlocked. Safe headroom ₹" + safe_str + " at 50% LTV.");
   } else if (eventType === "RAW_PROCURED") {
-    await pushMsg("Tracker", "Yarn & dye procured at Ravi's factory. Value added to physical asset.");
-    await pushMsg("Loan", `Stage advanced to RAW_PROCURED. Base LTV elevated to 55%. Safe limit updated to ₹${safe_str}.`);
+    await pushMsg("Tracker", "[WMS Inbound Scan] Yarn 4,200kg + reactive dye 180kg received at Ravi's factory. GRN-2891 logged.");
+    await pushMsg("Loan", "[Loan Engine] Procurement financing active. LTV 55% → safe headroom ₹" + safe_str + ".");
   } else if (eventType === "PRODUCED") {
-    await pushMsg("Tracker", "10,000 t-shirts manufactured and quality checked at Factory store.");
-    await pushMsg("Loan", `Stage updated to FINISHED_GOODS. Inventory financing headroom unlocked at 65% LTV (₹${safe_str}).`);
+    await pushMsg("Tracker", "[MES/ERP] Production batch B-447 complete. QC passed: 10,000 units. Stored at Factory floor Bay-3.");
+    await pushMsg("Loan", "[Loan Engine] Inventory financing unlocked at 65% LTV. Headroom ₹" + safe_str + ".");
   } else if (eventType === "SHIPPED") {
-    await pushMsg("Tracker", "Consignment in transit on NH-48 via GPS-tracked container fleet.");
-    await pushMsg("Risk", "In-transit sensors online. Telemetry and route adherence normal.");
-    await pushMsg("Loan", `LTV increased to 75% for in-transit financing (₹${safe_str} safe headroom).`);
+    await pushMsg("Tracker", "[FASTag/GPS] e-Way Bill EWB-7741 active. Container MH-04-CT-2891 dispatched on NH-48. ETA: +4 days.");
+    await pushMsg("Risk", "[IoT Telemetry] Temp: 22°C ✓  Humidity: 58% ✓  GPS lock: active. Route adherence: normal.");
+    await pushMsg("Loan", "[Loan Engine] In-transit financing at 75% LTV. Headroom ₹" + safe_str + ".");
+    const drawn = ASSET.financial?.drawn || 0;
+    const prevInstrument = ASSET.financial?.instrument || "";
+    if (drawn > 0 && prevInstrument && prevInstrument !== "in-transit financing") {
+      const newHeadroom = ASSET.financial?.safe_limit || 0;
+      await pushMsg("Loan", "[Loan Engine] Instrument upgrade available: existing " + prevInstrument + " → in-transit financing at 75% LTV. Additional headroom unlocked: ₹" + (newHeadroom).toLocaleString("en-IN") + ". Accept next drawdown to upgrade.");
+    }
   } else if (eventType === "DELAYED") {
     const delay = asset.physical?.delay_days || 3;
-    await pushMsg("Tracker", `Logistics alert: +3 days transit delay reported (total delay: ${delay}d) due to highway congestion.`);
-    await pushMsg("Risk", `Transit delay detected (+3 days). Risk index adjusted upwards to ${risk.toFixed(2)}. Financing capacity scaled down.`);
+    await pushMsg("Tracker", "[FASTag Alert] NH-48 congestion detected near Surat. ETA revised +3 days (total delay: " + delay + "d).");
+    await pushMsg("Risk", "[Risk Engine] Delay factor updated. Risk index → " + risk.toFixed(2) + ". Headroom auto-contracted.");
   } else if (eventType === "TEMP_SPIKE") {
-    await pushMsg("Tracker", "Sensor telemetry alert: Temperature spike detected in transit container.");
-    await pushMsg("Risk", `Condition marked DEGRADED (heat). Risk index elevated to ${risk.toFixed(2)} to account for inspection buffer.`);
+    await pushMsg("Tracker", "[IoT Sensor] Container MH-04-CT-2891: Temp spike 41°C detected at 14:32. Alert sent to carrier.");
+    await pushMsg("Risk", "[Risk Engine] Condition → DEGRADED (heat). Risk index → " + risk.toFixed(2) + ". Inspection buffer applied. Headroom reduced.");
   } else if (eventType === "WAREHOUSED") {
-    await pushMsg("Tracker", "Goods safely received and checked in at Chennai WH-7.");
-    await pushMsg("Loan", `Warehouse financing active at 80% LTV. Headroom recomputed to ₹${safe_str}.`);
+    await pushMsg("Tracker", "[WMS/RFID] Inbound scan complete at Chennai WH-7. SKU-10K-TS accepted. Storage: Rack-B4. WR-5512 issued.");
+    await pushMsg("Loan", "[Loan Engine] Warehouse financing at 80% LTV. Headroom ₹" + safe_str + ". WR-5512 as collateral.");
+    const drawnW = ASSET.financial?.drawn || 0;
+    if (drawnW > 0) {
+      await pushMsg("Loan", "[Loan Engine] Instrument upgrade available → warehouse financing at 80% LTV. WR-5512 accepted as collateral. Additional capacity unlocked.");
+    }
   } else if (eventType === "DELIVERED") {
-    await pushMsg("Tracker", "Proof of Delivery logged at BigRetail DC. Delay counter reset to 0.");
-    await pushMsg("Risk", `Delivery confirmed. Physical transit risk resolved to baseline (${risk.toFixed(2)}).`);
-    await pushMsg("Loan", `Trade financing headroom expanded to 85% LTV (₹${safe_str}).`);
+    await pushMsg("Tracker", "[ePOD Signed] BigRetail DC-Mumbai accepted delivery. Digital PoD signed 09:14. Transit risk cleared.");
+    await pushMsg("Risk", "[Risk Engine] Physical delivery confirmed. Transit risk resolved → baseline " + risk.toFixed(2) + ".");
+    await pushMsg("Loan", "[Loan Engine] Trade financing at 85% LTV. Headroom ₹" + safe_str + ".");
   } else if (eventType === "INVOICED") {
-    await pushMsg("Tracker", "Commercial Invoice raised for ₹50,00,000 under net-60 terms with BigRetail.");
-    await pushMsg("Loan", `Invoice financing unlocked at maximum 90% LTV (₹${safe_str} safe headroom).`);
+    await pushMsg("Tracker", "[GST e-Invoice] IRN: 4f9a...c831 registered on IRP. Invoice INV-2891 for ₹50L. Net-60 terms. BigRetail GSTIN verified.");
+    await pushMsg("Loan", "[Loan Engine] Invoice financing at 90% LTV — maximum. Headroom ₹" + safe_str + ". IRN-backed collateral.");
+    const drawnI = ASSET.financial?.drawn || 0;
+    if (drawnI > 0) {
+      await pushMsg("Loan", "[Loan Engine] Instrument upgrade available → invoice financing at 90% LTV (maximum). IRN-backed receivable accepted. This is the highest LTV available in this lifecycle.");
+    }
   } else if (eventType === "RECEIVABLE_DELAYED") {
-    await pushMsg("Tracker", "Payment alert: BigRetail missed day-60 settlement schedule.");
-    await pushMsg("Risk", `Buyer risk elevated (+0.35). Risk index adjusted to ${risk.toFixed(2)}; credit headroom constrained.`);
+    await pushMsg("Tracker", "[Account Aggregator] BigRetail payment not received at Day-60. DSO breach detected. Alert raised.");
+    await pushMsg("Risk", "[Risk Engine] Buyer risk +0.35 (DSO breach). Risk index → " + risk.toFixed(2) + ". Headroom auto-contracted.");
   }
 }
 
