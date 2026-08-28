@@ -10,30 +10,38 @@
   
   <!-- Vendored Tailwind & Chart.js per contract -->
   <link rel="stylesheet" href="/vendor/tw.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="/vendor/chart.umd.js"></script>
 
   <style>
     :root {
-      --bg: #0B0E1B;
+      --bg: #020617;
       --navy: #6366F1;
       --navy-dark: #4F46E5;
       --navy-light: #818CF8;
-      --navy-subtle: rgba(99, 102, 241, 0.15);
-      --mint: #02C39A;
-      --mint-dark: #00E5B3;
-      --coral: #E4572E;
-      --coral-dark: #FF6B4A;
-      --card-bg: #12162A;
-      --card-border: rgba(255, 255, 255, 0.09);
+      --navy-subtle: rgba(99, 102, 241, 0.16);
+      --mint: #10B981;
+      --mint-dark: #34D399;
+      --coral: #F43F5E;
+      --coral-dark: #FB7185;
+      --card-bg: #0B1026;
+      --card-border: rgba(148, 163, 184, 0.14);
       --text-main: #F8FAFC;
       --text-muted: #94A3B8;
       --text-subtle: #64748B;
+      --gold: #F5C542;
+      --amber: #F59E0B;
+      --sky: #38BDF8;
+      --violet: #A78BFA;
+      --cyan: #22D3EE;
     }
 
     body {
       background-color: var(--bg);
       color: var(--text-main);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: "IBM Plex Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
       padding: 0;
       -webkit-font-smoothing: antialiased;
@@ -160,6 +168,142 @@
     }
     .stage-item:hover {
       background-color: rgba(255, 255, 255, 0.04);
+    }
+
+    /* ============================================================
+       OBSIDIAN LEDGER — institutional finance override layer
+       Token swap + cascade overrides only. No HTML changes needed.
+       ============================================================ */
+
+    body {
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(1100px 540px at 12% -8%, rgba(99, 102, 241, 0.16), transparent 62%),
+        radial-gradient(900px 480px at 88% 112%, rgba(16, 185, 129, 0.10), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.035) 0 1px, transparent 1px 44px),
+        repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.035) 0 1px, transparent 1px 44px);
+      background-attachment: fixed;
+      font-variant-numeric: tabular-nums;
+    }
+
+    ::selection { background: rgba(99, 102, 241, 0.35); color: #fff; }
+
+    /* All numerals, hashes, timestamps: terminal mono */
+    .font-mono, code, pre {
+      font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+
+    /* Glass card surfaces */
+    .ct-card {
+      background: linear-gradient(180deg, rgba(17, 23, 48, 0.82), rgba(9, 13, 30, 0.82));
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 8px 30px rgba(2, 6, 23, 0.55);
+    }
+
+    .ct-card-hover:hover {
+      background: linear-gradient(180deg, rgba(22, 29, 60, 0.9), rgba(11, 16, 38, 0.9));
+      border-color: rgba(99, 102, 241, 0.45);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.07),
+        0 0 0 1px rgba(99, 102, 241, 0.15),
+        0 14px 40px rgba(2, 6, 23, 0.7),
+        0 0 32px rgba(99, 102, 241, 0.12);
+      transform: translateY(-2px);
+    }
+
+    /* Buttons & interactive polish */
+    button, [role="button"], a { cursor: pointer; }
+    button { transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease; }
+    .btn-press:active { transform: scale(0.97); }
+
+    button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--navy-light);
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+
+    input, select, textarea {
+      background-color: rgba(9, 13, 30, 0.7);
+      border-color: var(--card-border);
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+    }
+    ::placeholder { color: var(--text-subtle); }
+
+    /* Live indicator */
+    .pulse-dot {
+      background: var(--mint-dark);
+      box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
+      animation: ol-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes ol-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+      70%  { box-shadow: 0 0 0 9px rgba(52, 211, 153, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    }
+
+    /* Agent badges — tinted glass pills, terminal caps */
+    .badge-tracker, .badge-risk, .badge-loan, .badge-transition, .badge-fraud, .badge-assistant {
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      border: 1px solid;
+      border-radius: 999px;
+    }
+    .badge-tracker    { background: rgba(56, 189, 248, 0.12) !important; color: var(--sky) !important;    border-color: rgba(56, 189, 248, 0.35); }
+    .badge-risk       { background: rgba(245, 158, 11, 0.12) !important; color: var(--amber) !important;  border-color: rgba(245, 158, 11, 0.35); }
+    .badge-loan       { background: rgba(52, 211, 153, 0.12) !important; color: var(--mint-dark) !important; border-color: rgba(52, 211, 153, 0.35); }
+    .badge-transition { background: rgba(167, 139, 250, 0.12) !important; color: var(--violet) !important; border-color: rgba(167, 139, 250, 0.35); }
+    .badge-fraud      { background: rgba(251, 113, 133, 0.14) !important; color: var(--coral-dark) !important; border-color: rgba(251, 113, 133, 0.4); }
+    .badge-assistant  { background: rgba(34, 211, 238, 0.12) !important; color: var(--cyan) !important;   border-color: rgba(34, 211, 238, 0.35); }
+
+    /* Lifecycle timeline nodes */
+    .stage-item { transition: transform 0.2s ease, filter 0.2s ease; }
+    .stage-item:hover { transform: translateY(-1px); filter: brightness(1.15); }
+
+    /* Toasts */
+    .toast-pill {
+      background: rgba(13, 18, 40, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      box-shadow: 0 12px 36px rgba(2, 6, 23, 0.7);
+    }
+
+    /* Scrollbars */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.35);
+      border-radius: 999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.6); }
+
+    /* Optional utility (safe to leave unused) */
+    .text-gradient {
+      background: linear-gradient(92deg, #818CF8, #22D3EE 55%, #34D399);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    /* Accessibility: honor reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .pulse-dot { animation: none; }
     }
   </style>
 </head>
@@ -879,12 +1023,12 @@
     };
 
     const AGENT_COLORS = {
-      Tracker: "#1E2761",
-      Risk: "#EF9F27",
-      Loan: "#02C39A",
-      Transition: "#7C5CDB",
-      Fraud: "#E4572E",
-      Assistant: "#0B8F73"
+      Tracker: "#38BDF8",
+      Risk: "#F59E0B",
+      Loan: "#34D399",
+      Transition: "#A78BFA",
+      Fraud: "#FB7185",
+      Assistant: "#22D3EE"
     };
 
     // State Variables
@@ -1343,7 +1487,7 @@
             {
               label: "Order Value (Ceiling)",
               data: [50, 50, 50, 50, 50, 50, 50, 50, 50],
-              borderColor: "#818cf8",
+              borderColor: "#F59E0B",
               borderWidth: 2,
               borderDash: [6, 4],
               pointRadius: 0,
@@ -1353,13 +1497,13 @@
             {
               label: "Safe Capacity Curve",
               data: [24.3, 26.7, 29.1, 31.5, 36.4, 38.8, 41.2, 43.6, 0],
-              borderColor: "#02C39A",
-              backgroundColor: "rgba(2, 195, 154, 0.15)",
+              borderColor: "#34D399",
+              backgroundColor: "rgba(52, 211, 153, 0.16)",
               borderWidth: 2.5,
               fill: true,
               tension: 0.3,
               pointRadius: [4, 4, 4, 4, 4, 4, 4, 4, 4],
-              pointBackgroundColor: "#02C39A"
+              pointBackgroundColor: "#34D399"
             }
           ]
         },
@@ -1390,7 +1534,7 @@
                 font: { size: 10 },
                 color: "#64748B"
               },
-              grid: { color: "rgba(255, 255, 255, 0.07)" }
+              grid: { color: "rgba(148, 163, 184, 0.09)" }
             },
             x: {
               ticks: { font: { size: 9 }, color: "#64748B" },
