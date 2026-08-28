@@ -353,6 +353,11 @@
         </div>
       </div>
 
+      <div class="flex rounded-lg border border-white/10 overflow-hidden text-xs font-semibold" role="tablist" aria-label="Sign-in method">
+        <button type="button" id="modePasswordBtn" onclick="switchLoginMode('password')" class="flex-1 py-2 btn-press" style="background: var(--navy); color: #fff;">Password</button>
+        <button type="button" id="modeOtpBtn" onclick="switchLoginMode('otp')" class="flex-1 py-2 btn-press" style="background: rgba(255,255,255,0.05); color: #94A3B8;">Email OTP</button>
+      </div>
+
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 pt-2">
         <div>
           <label for="usernameInput" class="block text-xs font-semibold text-slate-300 mb-1">Username</label>
@@ -369,6 +374,24 @@
           <span>Sign In</span>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </button>
+      </form>
+
+      <form id="otpForm" onsubmit="handleOtpVerify(event)" class="space-y-4 pt-2 hidden">
+        <div>
+          <label for="otpEmailInput" class="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+          <input id="otpEmailInput" type="email" required class="w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="supplier@capitaltwin.demo" />
+        </div>
+        <button type="button" id="otpSendBtn" onclick="handleOtpRequest()" class="w-full py-3 text-white font-medium rounded-lg text-sm shadow-lg transition btn-press border border-white/15" style="background: var(--navy);">Send code</button>
+        <div id="otpCodeWrap" class="hidden space-y-4">
+          <div>
+            <label for="otpCodeInput" class="block text-xs font-semibold text-slate-300 mb-1">6-digit code</label>
+            <input id="otpCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 tracking-[0.4em] text-center font-mono focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="000000" />
+          </div>
+          <button type="submit" id="otpVerifyBtn" class="w-full py-3 text-white font-medium rounded-lg text-sm shadow-lg transition btn-press border border-white/15" style="background: var(--mint);">Verify &amp; sign in</button>
+        </div>
+        <p id="otpStatus" class="hidden text-xs text-slate-400 text-center"></p>
+        <div id="otpError" class="hidden p-3 bg-red-950/50 border border-red-500/40 rounded-lg text-xs font-medium text-red-300"></div>
+        <p class="text-[10px] text-slate-500 text-center">Demo inboxes: supplier@capitaltwin.demo · lender@capitaltwin.demo · admin@capitaltwin.demo</p>
       </form>
 
       <div class="pt-2 border-t border-white/10 text-center">
@@ -1125,6 +1148,116 @@
     function showLogin() {
       document.getElementById("loginScreen").classList.remove("hidden");
       document.getElementById("appContainer").classList.add("hidden");
+    }
+
+    let otpResendTimer = null;
+
+    function switchLoginMode(mode) {
+      const pwActive = mode === "password";
+      document.getElementById("loginForm").classList.toggle("hidden", !pwActive);
+      document.getElementById("otpForm").classList.toggle("hidden", pwActive);
+      const pb = document.getElementById("modePasswordBtn");
+      const ob = document.getElementById("modeOtpBtn");
+      pb.style.background = pwActive ? "var(--navy)" : "rgba(255,255,255,0.05)";
+      pb.style.color = pwActive ? "#fff" : "#94A3B8";
+      ob.style.background = pwActive ? "rgba(255,255,255,0.05)" : "var(--navy)";
+      ob.style.color = pwActive ? "#94A3B8" : "#fff";
+    }
+
+    async function handleOtpRequest() {
+      const emailEl = document.getElementById("otpEmailInput");
+      const errBox = document.getElementById("otpError");
+      const status = document.getElementById("otpStatus");
+      const sendBtn = document.getElementById("otpSendBtn");
+      const codeWrap = document.getElementById("otpCodeWrap");
+      const codeEl = document.getElementById("otpCodeInput");
+      errBox.classList.add("hidden");
+      const email = (emailEl.value || "").trim();
+      if (!email || !emailEl.checkValidity()) {
+        errBox.textContent = "Enter a valid email address.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch("/auth/otp/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          errBox.textContent = data.error || "Could not send the code.";
+          errBox.classList.remove("hidden");
+          sendBtn.disabled = false;
+          return;
+        }
+        codeWrap.classList.remove("hidden");
+        status.classList.remove("hidden");
+        if (data.dev_mode && data.demo_otp) {
+          codeEl.value = data.demo_otp;
+          status.textContent = "Dev mode: code auto-filled (no email provider configured).";
+        } else {
+          status.textContent = data.message || "Code sent. Check your inbox.";
+          codeEl.value = "";
+          codeEl.focus();
+        }
+        let secs = 30;
+        sendBtn.textContent = "Resend in " + secs + "s";
+        if (otpResendTimer) clearInterval(otpResendTimer);
+        otpResendTimer = setInterval(() => {
+          secs -= 1;
+          if (secs <= 0) {
+            clearInterval(otpResendTimer);
+            sendBtn.textContent = "Resend code";
+            sendBtn.disabled = false;
+          } else {
+            sendBtn.textContent = "Resend in " + secs + "s";
+          }
+        }, 1000);
+      } catch (err) {
+        errBox.textContent = "Network error connecting to backend.";
+        errBox.classList.remove("hidden");
+        sendBtn.disabled = false;
+      }
+    }
+
+    async function handleOtpVerify(e) {
+      e.preventDefault();
+      const email = (document.getElementById("otpEmailInput").value || "").trim();
+      const code = (document.getElementById("otpCodeInput").value || "").trim();
+      const errBox = document.getElementById("otpError");
+      const btn = document.getElementById("otpVerifyBtn");
+      errBox.classList.add("hidden");
+      if (!/^\d{6}$/.test(code)) {
+        errBox.textContent = "Enter the 6-digit code from your email.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const res = await fetch("/auth/otp/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, code })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          currentUser = data.user || data;
+          sessionStorage.setItem("capitaltwin_user", JSON.stringify(currentUser));
+          showApp();
+        } else {
+          errBox.textContent = data.error || "Invalid or expired code.";
+          errBox.classList.remove("hidden");
+        }
+      } catch (err) {
+        errBox.textContent = "Network error connecting to backend.";
+        errBox.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     function showApp() {

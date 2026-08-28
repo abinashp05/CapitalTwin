@@ -357,6 +357,143 @@ async function runAgentEvents(asset: typeof ASSET, eventType: string) {
   }
 }
 
+function getUserEmail(username: string): string {
+  if (username === "ravi123" || username === "ravi") {
+    return (process.env.DEMO_SUPPLIER_EMAIL || "").trim() || "supplier@capitaltwin.demo";
+  }
+  if (username === "lender01" || username === "lender") {
+    return (process.env.DEMO_LENDER_EMAIL || "").trim() || "lender@capitaltwin.demo";
+  }
+  if (username === "admin2026" || username === "admin") {
+    return (process.env.DEMO_ADMIN_EMAIL || "").trim() || "admin@capitaltwin.demo";
+  }
+  return `${username}@capitaltwin.demo`;
+}
+
+function getUserByEmail(email: string): { id: string; username: string; role: string; name: string; org: string; is_active: boolean } | null {
+  const cleanEmail = email.trim().toLowerCase();
+  for (const [uname, u] of Object.entries(USERS)) {
+    const userEmail = getUserEmail(uname).toLowerCase();
+    if (userEmail === cleanEmail) {
+      return {
+        id: uname,
+        username: uname,
+        role: u.role,
+        name: u.name,
+        org: u.org,
+        is_active: true,
+      };
+    }
+  }
+  return null;
+}
+
+// In-memory Audit Log Store
+interface AuditLog {
+  id: number;
+  userId: string | null;
+  action: string;
+  ip: string;
+  detail: string;
+  timestamp: string;
+}
+let auditLogCounter = 0;
+const AUDIT_LOGS: AuditLog[] = [];
+
+const auditRepo = {
+  logAuthEvent(userId: string | null, action: string, ip: string, detail: string) {
+    auditLogCounter += 1;
+    AUDIT_LOGS.push({
+      id: auditLogCounter,
+      userId,
+      action,
+      ip,
+      detail,
+      timestamp: new Date().toISOString(),
+    });
+  },
+  getLogs() {
+    return AUDIT_LOGS;
+  },
+};
+
+// In-memory OTP store
+interface OtpRecord {
+  id: number;
+  user_id: string;
+  email: string;
+  code_hash: string;
+  expires_at: string;
+  attempts: number;
+  consumed: number;
+  created_at: string;
+}
+
+let otpIdCounter = 0;
+const OTP_STORE: OtpRecord[] = [];
+
+const otpRepo = {
+  createOtp(userId: string, email: string, codeHash: string, expiresAt: string): OtpRecord {
+    const now = new Date().toISOString();
+    const normalized = email.trim().toLowerCase();
+    for (const item of OTP_STORE) {
+      if (item.email === normalized && item.consumed === 0) {
+        item.consumed = 1;
+      }
+    }
+    otpIdCounter += 1;
+    const record: OtpRecord = {
+      id: otpIdCounter,
+      user_id: userId,
+      email: normalized,
+      code_hash: codeHash,
+      expires_at: expiresAt,
+      attempts: 0,
+      consumed: 0,
+      created_at: now,
+    };
+    OTP_STORE.push(record);
+    return record;
+  },
+  getActiveByEmail(email: string): OtpRecord | null {
+    const now = new Date().toISOString();
+    const normalized = email.trim().toLowerCase();
+    for (let i = OTP_STORE.length - 1; i >= 0; i--) {
+      const rec = OTP_STORE[i];
+      if (rec.email === normalized && rec.consumed === 0 && rec.expires_at > now) {
+        return rec;
+      }
+    }
+    return null;
+  },
+  incrementAttempts(id: number): number {
+    const rec = OTP_STORE.find((r) => r.id === id);
+    if (rec) {
+      rec.attempts += 1;
+      return rec.attempts;
+    }
+    return 0;
+  },
+  markConsumed(id: number): void {
+    const rec = OTP_STORE.find((r) => r.id === id);
+    if (rec) {
+      rec.consumed = 1;
+    }
+  },
+};
+
+export function generateOtpCode(): string {
+  return String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+}
+
+export function generateSessionToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+export function hashSessionToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
 // Simple in-memory login rate limiter (zero deps): max 8 failed attempts / 15 min per IP.
 const LOGIN_ATTEMPTS = new Map<string, { count: number; resetAt: number }>();
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -392,12 +529,13 @@ function loginRateClear(key: string): void {
   LOGIN_ATTEMPTS.delete(key);
 }
 
-// REST Endpoints
-app.post("/login", (req: Request, res: Response) => {
-  const { username, password } = req.body || {};
+// POST /auth/login (and /login alias)
+const handleLoginRoute = (req: Request, res: Response) => {
+  const { username = "", password = "" } = req.body || {};
   const ip = getClientIp(req);
 
   if (loginRateBlocked(ip)) {
+    auditRepo.logAuthEvent(null, "LOGIN_FAILURE", ip, "RATE_LIMITED");
     return res.status(429).json({
       ok: false,
       error: "Too many failed login attempts. Please wait a few minutes and try again.",
@@ -407,17 +545,201 @@ app.post("/login", (req: Request, res: Response) => {
   const user = USERS[username];
   if (!user || user.pw !== password) {
     loginRateFail(ip);
-    return res.status(401).json({ ok: false, why: "Invalid username or password" });
+    auditRepo.logAuthEvent(user ? username : null, "LOGIN_FAILURE", ip, "INVALID_CREDENTIALS");
+    return res.status(401).json({ ok: false, why: "Invalid username or password", error: "Invalid username or password" });
   }
 
   loginRateClear(ip);
-  res.json({
-    ok: true,
+  auditRepo.logAuthEvent(username, "LOGIN_SUCCESS", ip, "SUCCESS");
+
+  const safeUser = {
+    id: username,
     username,
     role: user.role,
     name: user.name,
     org: user.org,
+    email: getUserEmail(username),
+    is_active: true,
+  };
+
+  res.json({
+    ok: true,
+    user: safeUser,
+    username,
+    role: user.role,
+    name: user.name,
+    org: user.org,
+    email: safeUser.email,
   });
+};
+
+app.post("/auth/login", handleLoginRoute);
+app.post("/login", handleLoginRoute);
+
+// --------------------------------------------------
+// EMAIL OTP (PASSWORDLESS) LOGIN
+// --------------------------------------------------
+
+const OTP_REQUESTS = new Map<string, { count: number; resetAt: number }>();
+const OTP_REQUEST_WINDOW_MS = 10 * 60 * 1000;
+const OTP_REQUEST_MAX = 3;
+const OTP_TTL_MS = 5 * 60 * 1000;
+const OTP_MAX_VERIFY_ATTEMPTS = 5;
+
+function otpRequestAllowed(key: string): boolean {
+  const now = Date.now();
+  const entry = OTP_REQUESTS.get(key);
+  if (!entry || now > entry.resetAt) {
+    OTP_REQUESTS.set(key, { count: 1, resetAt: now + OTP_REQUEST_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= OTP_REQUEST_MAX) return false;
+  entry.count += 1;
+  return true;
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+function otpDevMode(): boolean {
+  if (process.env.OTP_DEV_MODE === "false") return false;
+  if (process.env.OTP_DEV_MODE === "true") return true;
+  return !process.env.RESEND_API_KEY;
+}
+
+async function sendOtpEmail(email: string, code: string): Promise<{ sent: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { sent: false, error: "RESEND_API_KEY not configured" };
+  try {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || "CapitalTwin <onboarding@resend.dev>",
+        to: [email],
+        subject: `${code} is your CapitalTwin login code`,
+        text: `Your CapitalTwin one-time login code is ${code}.\n\nIt expires in 5 minutes. If you didn't request this, you can ignore this email.`,
+      }),
+    });
+    if (!resp.ok) {
+      const body = await resp.text();
+      return { sent: false, error: `Email provider error ${resp.status}: ${body.slice(0, 200)}` };
+    }
+    return { sent: true };
+  } catch (err: any) {
+    return { sent: false, error: err?.message || String(err) };
+  }
+}
+
+// POST /auth/otp/request — issue a one-time code for a registered email
+app.post("/auth/otp/request", async (req: Request, res: Response) => {
+  const { email = "" } = req.body || {};
+  const ip = getClientIp(req);
+  const cleanEmail = String(email).trim().toLowerCase();
+
+  if (!cleanEmail || !isValidEmail(cleanEmail)) {
+    return res.status(400).json({ ok: false, error: "A valid email address is required." });
+  }
+
+  if (!otpRequestAllowed(`${ip}:${cleanEmail}`)) {
+    auditRepo.logAuthEvent(null, "OTP_REQUEST", ip, "RATE_LIMITED");
+    return res.status(429).json({ ok: false, error: "Too many code requests. Please wait a few minutes." });
+  }
+
+  const genericMsg = "If that email is registered, a login code has been sent.";
+  const user = getUserByEmail(cleanEmail);
+
+  if (!user || !user.is_active) {
+    auditRepo.logAuthEvent(null, "OTP_REQUEST", ip, `UNKNOWN_EMAIL: ${cleanEmail.slice(0, 40)}`);
+    // Identical response to the success path to prevent account enumeration
+    return res.json({ ok: true, message: genericMsg });
+  }
+
+  const code = generateOtpCode();
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString();
+  otpRepo.createOtp(user.id, cleanEmail, hashSessionToken(code), expiresAt);
+  auditRepo.logAuthEvent(user.id, "OTP_REQUEST", ip, "CODE_ISSUED");
+
+  const delivery = await sendOtpEmail(cleanEmail, code);
+
+  if (otpDevMode()) {
+    // Demo convenience only: expose the code so the flow works without an
+    // email provider. Set OTP_DEV_MODE=false with a real key for production.
+    console.log(`[OTP DEV MODE] Login code for ${cleanEmail}: ${code}`);
+    return res.json({
+      ok: true,
+      message: delivery.sent ? genericMsg : "Dev mode: email provider not configured; code shown below.",
+      dev_mode: true,
+      demo_otp: code,
+    });
+  }
+
+  if (!delivery.sent) {
+    console.error("OTP email delivery failed:", delivery.error);
+    return res.status(502).json({ ok: false, error: "Could not send the code email. Try again shortly." });
+  }
+
+  return res.json({ ok: true, message: genericMsg });
+});
+
+// POST /auth/otp/verify — exchange email + code for an authenticated session
+app.post("/auth/otp/verify", (req: Request, res: Response) => {
+  const { email = "", code = "" } = req.body || {};
+  const ip = getClientIp(req);
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanCode = String(code).trim();
+
+  if (!cleanEmail || !isValidEmail(cleanEmail) || !/^\d{6}$/.test(cleanCode)) {
+    return res.status(400).json({ ok: false, error: "Email and the 6-digit code are required." });
+  }
+
+  const user = getUserByEmail(cleanEmail);
+  const active = user ? otpRepo.getActiveByEmail(cleanEmail) : null;
+
+  if (!user || !user.is_active || !active) {
+    auditRepo.logAuthEvent(user ? user.id : null, "OTP_LOGIN_FAILURE", ip, "NO_ACTIVE_CODE");
+    return res.status(401).json({ ok: false, error: "Invalid or expired code. Request a new one." });
+  }
+
+  if (active.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
+    otpRepo.markConsumed(active.id);
+    auditRepo.logAuthEvent(user.id, "OTP_LOGIN_FAILURE", ip, "MAX_ATTEMPTS");
+    return res.status(429).json({ ok: false, error: "Too many incorrect attempts. Request a new code." });
+  }
+
+  const providedHash = Buffer.from(hashSessionToken(cleanCode), "hex");
+  const storedHash = Buffer.from(active.code_hash, "hex");
+  const match = providedHash.length === storedHash.length && crypto.timingSafeEqual(providedHash, storedHash);
+
+  if (!match) {
+    const attempts = otpRepo.incrementAttempts(active.id);
+    auditRepo.logAuthEvent(user.id, "OTP_LOGIN_FAILURE", ip, `WRONG_CODE_${attempts}`);
+    return res.status(401).json({ ok: false, error: "Invalid or expired code. Request a new one." });
+  }
+
+  otpRepo.markConsumed(active.id);
+
+  const rawToken = generateSessionToken();
+  auditRepo.logAuthEvent(user.id, "OTP_LOGIN_SUCCESS", ip, "SUCCESS");
+
+  const safeUser = {
+    id: user.id,
+    username: user.username,
+    role: user.role,
+    name: user.name,
+    org: user.org,
+    email: cleanEmail,
+    is_active: true,
+  };
+  return res.json({ ok: true, user: safeUser, token: rawToken, ...safeUser });
+});
+
+app.get("/admin/audit-logs", (req: Request, res: Response) => {
+  res.json({ ok: true, logs: auditRepo.getLogs() });
 });
 
 app.get("/asset/:id", (req: Request, res: Response) => {
