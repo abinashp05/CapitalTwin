@@ -321,191 +321,40 @@ async function runAgentEvents(asset: typeof ASSET, eventType: string) {
   const safe_str = safe_lim.toLocaleString("en-IN");
 
   if (eventType === "ORDER_CONFIRMED") {
-    await pushMsg("Tracker", "[ERP→PO Confirmed] Order ORD-123 verified: 10,000 t-shirts × ₹500 = ₹50L. Title registered to Ravi Textiles.");
-    await pushMsg("Risk", "[Account Aggregator] Buyer BigRetail credit score: AA. Baseline risk index set at " + risk.toFixed(2) + ".");
-    await pushMsg("Loan", "[Loan Engine] PO financing unlocked. Safe headroom ₹" + safe_str + " at 50% LTV.");
+    await pushMsg("Tracker", "Order confirmed for 10,000 t-shirts by BigRetail. Title registered to Ravi Textiles.");
+    await pushMsg("Risk", `Initial baseline risk assessed at ${risk.toFixed(2)}. Buyer BigRetail credit rating rated AA.`);
+    await pushMsg("Loan", `Safe financing headroom established at ₹${safe_str} (50% LTV). Available for PO drawdown.`);
   } else if (eventType === "RAW_PROCURED") {
-    await pushMsg("Tracker", "[WMS Inbound Scan] Yarn 4,200kg + reactive dye 180kg received at Ravi's factory. GRN-2891 logged.");
-    await pushMsg("Loan", "[Loan Engine] Procurement financing active. LTV 55% → safe headroom ₹" + safe_str + ".");
+    await pushMsg("Tracker", "Yarn & dye procured at Ravi's factory. Value added to physical asset.");
+    await pushMsg("Loan", `Stage advanced to RAW_PROCURED. Base LTV elevated to 55%. Safe limit updated to ₹${safe_str}.`);
   } else if (eventType === "PRODUCED") {
-    await pushMsg("Tracker", "[MES/ERP] Production batch B-447 complete. QC passed: 10,000 units. Stored at Factory floor Bay-3.");
-    await pushMsg("Loan", "[Loan Engine] Inventory financing unlocked at 65% LTV. Headroom ₹" + safe_str + ".");
+    await pushMsg("Tracker", "10,000 t-shirts manufactured and quality checked at Factory store.");
+    await pushMsg("Loan", `Stage updated to FINISHED_GOODS. Inventory financing headroom unlocked at 65% LTV (₹${safe_str}).`);
   } else if (eventType === "SHIPPED") {
-    await pushMsg("Tracker", "[FASTag/GPS] e-Way Bill EWB-7741 active. Container MH-04-CT-2891 dispatched on NH-48. ETA: +4 days.");
-    await pushMsg("Risk", "[IoT Telemetry] Temp: 22°C ✓  Humidity: 58% ✓  GPS lock: active. Route adherence: normal.");
-    await pushMsg("Loan", "[Loan Engine] In-transit financing at 75% LTV. Headroom ₹" + safe_str + ".");
-    const drawn = ASSET.financial?.drawn || 0;
-    const prevInstrument = ASSET.financial?.instrument || "";
-    if (drawn > 0 && prevInstrument && prevInstrument !== "in-transit financing") {
-      const newHeadroom = ASSET.financial?.safe_limit || 0;
-      await pushMsg("Loan", "[Loan Engine] Instrument upgrade available: existing " + prevInstrument + " → in-transit financing at 75% LTV. Additional headroom unlocked: ₹" + (newHeadroom).toLocaleString("en-IN") + ". Accept next drawdown to upgrade.");
-    }
+    await pushMsg("Tracker", "Consignment in transit on NH-48 via GPS-tracked container fleet.");
+    await pushMsg("Risk", "In-transit sensors online. Telemetry and route adherence normal.");
+    await pushMsg("Loan", `LTV increased to 75% for in-transit financing (₹${safe_str} safe headroom).`);
   } else if (eventType === "DELAYED") {
     const delay = asset.physical?.delay_days || 3;
-    await pushMsg("Tracker", "[FASTag Alert] NH-48 congestion detected near Surat. ETA revised +3 days (total delay: " + delay + "d).");
-    await pushMsg("Risk", "[Risk Engine] Delay factor updated. Risk index → " + risk.toFixed(2) + ". Headroom auto-contracted.");
+    await pushMsg("Tracker", `Logistics alert: +3 days transit delay reported (total delay: ${delay}d) due to highway congestion.`);
+    await pushMsg("Risk", `Transit delay detected (+3 days). Risk index adjusted upwards to ${risk.toFixed(2)}. Financing capacity scaled down.`);
   } else if (eventType === "TEMP_SPIKE") {
-    await pushMsg("Tracker", "[IoT Sensor] Container MH-04-CT-2891: Temp spike 41°C detected at 14:32. Alert sent to carrier.");
-    await pushMsg("Risk", "[Risk Engine] Condition → DEGRADED (heat). Risk index → " + risk.toFixed(2) + ". Inspection buffer applied. Headroom reduced.");
+    await pushMsg("Tracker", "Sensor telemetry alert: Temperature spike detected in transit container.");
+    await pushMsg("Risk", `Condition marked DEGRADED (heat). Risk index elevated to ${risk.toFixed(2)} to account for inspection buffer.`);
   } else if (eventType === "WAREHOUSED") {
-    await pushMsg("Tracker", "[WMS/RFID] Inbound scan complete at Chennai WH-7. SKU-10K-TS accepted. Storage: Rack-B4. WR-5512 issued.");
-    await pushMsg("Loan", "[Loan Engine] Warehouse financing at 80% LTV. Headroom ₹" + safe_str + ". WR-5512 as collateral.");
-    const drawnW = ASSET.financial?.drawn || 0;
-    if (drawnW > 0) {
-      await pushMsg("Loan", "[Loan Engine] Instrument upgrade available → warehouse financing at 80% LTV. WR-5512 accepted as collateral. Additional capacity unlocked.");
-    }
+    await pushMsg("Tracker", "Goods safely received and checked in at Chennai WH-7.");
+    await pushMsg("Loan", `Warehouse financing active at 80% LTV. Headroom recomputed to ₹${safe_str}.`);
   } else if (eventType === "DELIVERED") {
-    await pushMsg("Tracker", "[ePOD Signed] BigRetail DC-Mumbai accepted delivery. Digital PoD signed 09:14. Transit risk cleared.");
-    await pushMsg("Risk", "[Risk Engine] Physical delivery confirmed. Transit risk resolved → baseline " + risk.toFixed(2) + ".");
-    await pushMsg("Loan", "[Loan Engine] Trade financing at 85% LTV. Headroom ₹" + safe_str + ".");
+    await pushMsg("Tracker", "Proof of Delivery logged at BigRetail DC. Delay counter reset to 0.");
+    await pushMsg("Risk", `Delivery confirmed. Physical transit risk resolved to baseline (${risk.toFixed(2)}).`);
+    await pushMsg("Loan", `Trade financing headroom expanded to 85% LTV (₹${safe_str}).`);
   } else if (eventType === "INVOICED") {
-    await pushMsg("Tracker", "[GST e-Invoice] IRN: 4f9a...c831 registered on IRP. Invoice INV-2891 for ₹50L. Net-60 terms. BigRetail GSTIN verified.");
-    await pushMsg("Loan", "[Loan Engine] Invoice financing at 90% LTV — maximum. Headroom ₹" + safe_str + ". IRN-backed collateral.");
-    const drawnI = ASSET.financial?.drawn || 0;
-    if (drawnI > 0) {
-      await pushMsg("Loan", "[Loan Engine] Instrument upgrade available → invoice financing at 90% LTV (maximum). IRN-backed receivable accepted. This is the highest LTV available in this lifecycle.");
-    }
+    await pushMsg("Tracker", "Commercial Invoice raised for ₹50,00,000 under net-60 terms with BigRetail.");
+    await pushMsg("Loan", `Invoice financing unlocked at maximum 90% LTV (₹${safe_str} safe headroom).`);
   } else if (eventType === "RECEIVABLE_DELAYED") {
-    await pushMsg("Tracker", "[Account Aggregator] BigRetail payment not received at Day-60. DSO breach detected. Alert raised.");
-    await pushMsg("Risk", "[Risk Engine] Buyer risk +0.35 (DSO breach). Risk index → " + risk.toFixed(2) + ". Headroom auto-contracted.");
+    await pushMsg("Tracker", "Payment alert: BigRetail missed day-60 settlement schedule.");
+    await pushMsg("Risk", `Buyer risk elevated (+0.35). Risk index adjusted to ${risk.toFixed(2)}; credit headroom constrained.`);
   }
-}
-
-function getUserEmail(username: string): string {
-  if (username === "ravi123" || username === "ravi") {
-    return (process.env.DEMO_SUPPLIER_EMAIL || "").trim() || "supplier@capitaltwin.demo";
-  }
-  if (username === "lender01" || username === "lender") {
-    return (process.env.DEMO_LENDER_EMAIL || "").trim() || "lender@capitaltwin.demo";
-  }
-  if (username === "admin2026" || username === "admin") {
-    return (process.env.DEMO_ADMIN_EMAIL || "").trim() || "admin@capitaltwin.demo";
-  }
-  return `${username}@capitaltwin.demo`;
-}
-
-function getUserByEmail(email: string): { id: string; username: string; role: string; name: string; org: string; is_active: boolean } | null {
-  const cleanEmail = email.trim().toLowerCase();
-  for (const [uname, u] of Object.entries(USERS)) {
-    const userEmail = getUserEmail(uname).toLowerCase();
-    if (userEmail === cleanEmail) {
-      return {
-        id: uname,
-        username: uname,
-        role: u.role,
-        name: u.name,
-        org: u.org,
-        is_active: true,
-      };
-    }
-  }
-  return null;
-}
-
-// In-memory Audit Log Store
-interface AuditLog {
-  id: number;
-  userId: string | null;
-  action: string;
-  ip: string;
-  detail: string;
-  timestamp: string;
-}
-let auditLogCounter = 0;
-const AUDIT_LOGS: AuditLog[] = [];
-
-const auditRepo = {
-  logAuthEvent(userId: string | null, action: string, ip: string, detail: string) {
-    auditLogCounter += 1;
-    AUDIT_LOGS.push({
-      id: auditLogCounter,
-      userId,
-      action,
-      ip,
-      detail,
-      timestamp: new Date().toISOString(),
-    });
-  },
-  getLogs() {
-    return AUDIT_LOGS;
-  },
-};
-
-// In-memory OTP store
-interface OtpRecord {
-  id: number;
-  user_id: string;
-  email: string;
-  code_hash: string;
-  expires_at: string;
-  attempts: number;
-  consumed: number;
-  created_at: string;
-}
-
-let otpIdCounter = 0;
-const OTP_STORE: OtpRecord[] = [];
-
-const otpRepo = {
-  createOtp(userId: string, email: string, codeHash: string, expiresAt: string): OtpRecord {
-    const now = new Date().toISOString();
-    const normalized = email.trim().toLowerCase();
-    for (const item of OTP_STORE) {
-      if (item.email === normalized && item.consumed === 0) {
-        item.consumed = 1;
-      }
-    }
-    otpIdCounter += 1;
-    const record: OtpRecord = {
-      id: otpIdCounter,
-      user_id: userId,
-      email: normalized,
-      code_hash: codeHash,
-      expires_at: expiresAt,
-      attempts: 0,
-      consumed: 0,
-      created_at: now,
-    };
-    OTP_STORE.push(record);
-    return record;
-  },
-  getActiveByEmail(email: string): OtpRecord | null {
-    const now = new Date().toISOString();
-    const normalized = email.trim().toLowerCase();
-    for (let i = OTP_STORE.length - 1; i >= 0; i--) {
-      const rec = OTP_STORE[i];
-      if (rec.email === normalized && rec.consumed === 0 && rec.expires_at > now) {
-        return rec;
-      }
-    }
-    return null;
-  },
-  incrementAttempts(id: number): number {
-    const rec = OTP_STORE.find((r) => r.id === id);
-    if (rec) {
-      rec.attempts += 1;
-      return rec.attempts;
-    }
-    return 0;
-  },
-  markConsumed(id: number): void {
-    const rec = OTP_STORE.find((r) => r.id === id);
-    if (rec) {
-      rec.consumed = 1;
-    }
-  },
-};
-
-export function generateOtpCode(): string {
-  return String(crypto.randomInt(0, 1000000)).padStart(6, "0");
-}
-
-export function generateSessionToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
-
-export function hashSessionToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 // Simple in-memory login rate limiter (zero deps): max 8 failed attempts / 15 min per IP.
@@ -543,13 +392,12 @@ function loginRateClear(key: string): void {
   LOGIN_ATTEMPTS.delete(key);
 }
 
-// POST /auth/login (and /login alias)
-const handleLoginRoute = (req: Request, res: Response) => {
-  const { username = "", password = "" } = req.body || {};
+// REST Endpoints
+app.post("/login", (req: Request, res: Response) => {
+  const { username, password } = req.body || {};
   const ip = getClientIp(req);
 
   if (loginRateBlocked(ip)) {
-    auditRepo.logAuthEvent(null, "LOGIN_FAILURE", ip, "RATE_LIMITED");
     return res.status(429).json({
       ok: false,
       error: "Too many failed login attempts. Please wait a few minutes and try again.",
@@ -559,201 +407,17 @@ const handleLoginRoute = (req: Request, res: Response) => {
   const user = USERS[username];
   if (!user || user.pw !== password) {
     loginRateFail(ip);
-    auditRepo.logAuthEvent(user ? username : null, "LOGIN_FAILURE", ip, "INVALID_CREDENTIALS");
-    return res.status(401).json({ ok: false, why: "Invalid username or password", error: "Invalid username or password" });
+    return res.status(401).json({ ok: false, why: "Invalid username or password" });
   }
 
   loginRateClear(ip);
-  auditRepo.logAuthEvent(username, "LOGIN_SUCCESS", ip, "SUCCESS");
-
-  const safeUser = {
-    id: username,
-    username,
-    role: user.role,
-    name: user.name,
-    org: user.org,
-    email: getUserEmail(username),
-    is_active: true,
-  };
-
   res.json({
     ok: true,
-    user: safeUser,
     username,
     role: user.role,
     name: user.name,
     org: user.org,
-    email: safeUser.email,
   });
-};
-
-app.post("/auth/login", handleLoginRoute);
-app.post("/login", handleLoginRoute);
-
-// --------------------------------------------------
-// EMAIL OTP (PASSWORDLESS) LOGIN
-// --------------------------------------------------
-
-const OTP_REQUESTS = new Map<string, { count: number; resetAt: number }>();
-const OTP_REQUEST_WINDOW_MS = 10 * 60 * 1000;
-const OTP_REQUEST_MAX = 3;
-const OTP_TTL_MS = 5 * 60 * 1000;
-const OTP_MAX_VERIFY_ATTEMPTS = 5;
-
-function otpRequestAllowed(key: string): boolean {
-  const now = Date.now();
-  const entry = OTP_REQUESTS.get(key);
-  if (!entry || now > entry.resetAt) {
-    OTP_REQUESTS.set(key, { count: 1, resetAt: now + OTP_REQUEST_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= OTP_REQUEST_MAX) return false;
-  entry.count += 1;
-  return true;
-}
-
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
-}
-
-function otpDevMode(): boolean {
-  if (process.env.OTP_DEV_MODE === "false") return false;
-  if (process.env.OTP_DEV_MODE === "true") return true;
-  return !process.env.RESEND_API_KEY;
-}
-
-async function sendOtpEmail(email: string, code: string): Promise<{ sent: boolean; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return { sent: false, error: "RESEND_API_KEY not configured" };
-  try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM || "CapitalTwin <onboarding@resend.dev>",
-        to: [email],
-        subject: `${code} is your CapitalTwin login code`,
-        text: `Your CapitalTwin one-time login code is ${code}.\n\nIt expires in 5 minutes. If you didn't request this, you can ignore this email.`,
-      }),
-    });
-    if (!resp.ok) {
-      const body = await resp.text();
-      return { sent: false, error: `Email provider error ${resp.status}: ${body.slice(0, 200)}` };
-    }
-    return { sent: true };
-  } catch (err: any) {
-    return { sent: false, error: err?.message || String(err) };
-  }
-}
-
-// POST /auth/otp/request — issue a one-time code for a registered email
-app.post("/auth/otp/request", async (req: Request, res: Response) => {
-  const { email = "" } = req.body || {};
-  const ip = getClientIp(req);
-  const cleanEmail = String(email).trim().toLowerCase();
-
-  if (!cleanEmail || !isValidEmail(cleanEmail)) {
-    return res.status(400).json({ ok: false, error: "A valid email address is required." });
-  }
-
-  if (!otpRequestAllowed(`${ip}:${cleanEmail}`)) {
-    auditRepo.logAuthEvent(null, "OTP_REQUEST", ip, "RATE_LIMITED");
-    return res.status(429).json({ ok: false, error: "Too many code requests. Please wait a few minutes." });
-  }
-
-  const genericMsg = "If that email is registered, a login code has been sent.";
-  const user = getUserByEmail(cleanEmail);
-
-  if (!user || !user.is_active) {
-    auditRepo.logAuthEvent(null, "OTP_REQUEST", ip, `UNKNOWN_EMAIL: ${cleanEmail.slice(0, 40)}`);
-    // Identical response to the success path to prevent account enumeration
-    return res.json({ ok: true, message: genericMsg });
-  }
-
-  const code = generateOtpCode();
-  const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString();
-  otpRepo.createOtp(user.id, cleanEmail, hashSessionToken(code), expiresAt);
-  auditRepo.logAuthEvent(user.id, "OTP_REQUEST", ip, "CODE_ISSUED");
-
-  const delivery = await sendOtpEmail(cleanEmail, code);
-
-  if (otpDevMode()) {
-    // Demo convenience only: expose the code so the flow works without an
-    // email provider. Set OTP_DEV_MODE=false with a real key for production.
-    console.log(`[OTP DEV MODE] Login code for ${cleanEmail}: ${code}`);
-    return res.json({
-      ok: true,
-      message: delivery.sent ? genericMsg : "Dev mode: email provider not configured; code shown below.",
-      dev_mode: true,
-      demo_otp: code,
-    });
-  }
-
-  if (!delivery.sent) {
-    console.error("OTP email delivery failed:", delivery.error);
-    return res.status(502).json({ ok: false, error: "Could not send the code email. Try again shortly." });
-  }
-
-  return res.json({ ok: true, message: genericMsg });
-});
-
-// POST /auth/otp/verify — exchange email + code for an authenticated session
-app.post("/auth/otp/verify", (req: Request, res: Response) => {
-  const { email = "", code = "" } = req.body || {};
-  const ip = getClientIp(req);
-  const cleanEmail = String(email).trim().toLowerCase();
-  const cleanCode = String(code).trim();
-
-  if (!cleanEmail || !isValidEmail(cleanEmail) || !/^\d{6}$/.test(cleanCode)) {
-    return res.status(400).json({ ok: false, error: "Email and the 6-digit code are required." });
-  }
-
-  const user = getUserByEmail(cleanEmail);
-  const active = user ? otpRepo.getActiveByEmail(cleanEmail) : null;
-
-  if (!user || !user.is_active || !active) {
-    auditRepo.logAuthEvent(user ? user.id : null, "OTP_LOGIN_FAILURE", ip, "NO_ACTIVE_CODE");
-    return res.status(401).json({ ok: false, error: "Invalid or expired code. Request a new one." });
-  }
-
-  if (active.attempts >= OTP_MAX_VERIFY_ATTEMPTS) {
-    otpRepo.markConsumed(active.id);
-    auditRepo.logAuthEvent(user.id, "OTP_LOGIN_FAILURE", ip, "MAX_ATTEMPTS");
-    return res.status(429).json({ ok: false, error: "Too many incorrect attempts. Request a new code." });
-  }
-
-  const providedHash = Buffer.from(hashSessionToken(cleanCode), "hex");
-  const storedHash = Buffer.from(active.code_hash, "hex");
-  const match = providedHash.length === storedHash.length && crypto.timingSafeEqual(providedHash, storedHash);
-
-  if (!match) {
-    const attempts = otpRepo.incrementAttempts(active.id);
-    auditRepo.logAuthEvent(user.id, "OTP_LOGIN_FAILURE", ip, `WRONG_CODE_${attempts}`);
-    return res.status(401).json({ ok: false, error: "Invalid or expired code. Request a new one." });
-  }
-
-  otpRepo.markConsumed(active.id);
-
-  const rawToken = generateSessionToken();
-  auditRepo.logAuthEvent(user.id, "OTP_LOGIN_SUCCESS", ip, "SUCCESS");
-
-  const safeUser = {
-    id: user.id,
-    username: user.username,
-    role: user.role,
-    name: user.name,
-    org: user.org,
-    email: cleanEmail,
-    is_active: true,
-  };
-  return res.json({ ok: true, user: safeUser, token: rawToken, ...safeUser });
-});
-
-app.get("/admin/audit-logs", (req: Request, res: Response) => {
-  res.json({ ok: true, logs: auditRepo.getLogs() });
 });
 
 app.get("/asset/:id", (req: Request, res: Response) => {

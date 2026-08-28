@@ -183,14 +183,14 @@
       <div class="space-y-2">
         <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Quick Role Login</label>
         <div class="grid grid-cols-3 gap-2">
-          <button type="button" onclick="fillLogin('ravi', 'demo123')" class="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
-            Supplier<br/><span class="text-slate-500 text-[10px]">ravi</span>
+          <button type="button" onclick="fillLogin('ravi', 'demo123')" class="px-3 py-2.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
+            Supplier
           </button>
-          <button type="button" onclick="fillLogin('lender', 'demo123')" class="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
-            Lender<br/><span class="text-slate-500 text-[10px]">lender</span>
+          <button type="button" onclick="fillLogin('lender', 'demo123')" class="px-3 py-2.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
+            Lender
           </button>
-          <button type="button" onclick="fillLogin('admin', 'demo123')" class="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
-            Admin<br/><span class="text-slate-500 text-[10px]">admin</span>
+          <button type="button" onclick="fillLogin('admin', 'demo123')" class="px-3 py-2.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
+            Admin
           </button>
         </div>
       </div>
@@ -1100,11 +1100,19 @@
       }
     }
 
+    function safeFixed(num, decimals = 2, fallback = "0.00") {
+      if (num === null || num === undefined || isNaN(Number(num))) {
+        return fallback;
+      }
+      return Number(num).toFixed(decimals);
+    }
+
     function handleLiveMessage(msg) {
+      if (!msg) return;
       if (msg.kind === "twin_update") {
-        assetState = msg.asset;
+        assetState = msg.asset || {};
         if (msg.meta) {
-          fraudBlockedCount = msg.meta.fraud_blocked;
+          fraudBlockedCount = msg.meta.fraud_blocked || 0;
         }
         renderTwin();
       } else if (msg.kind === "agent_message") {
@@ -1160,17 +1168,17 @@
       const cont = assetState.contractual || {};
       const safeLimit = fin.safe_limit || 0;
       const drawn = fin.drawn || 0;
-      const risk = assetState.risk_index || 0.08;
+      const risk = assetState.risk_index != null && !isNaN(Number(assetState.risk_index)) ? Number(assetState.risk_index) : 0.08;
 
       // Available Financing Count-up
       animateValue("safeLimitHuge", prevSafeLimit, safeLimit, 600, (v) => "₹" + formatIndian(v));
       prevSafeLimit = safeLimit;
 
       // Meta line
-      document.getElementById("metaDrawn").textContent = `₹${(drawn / 100000).toFixed(1)}L`;
+      document.getElementById("metaDrawn").textContent = `₹${safeFixed((drawn || 0) / 100000, 1)}L`;
       document.getElementById("metaInstrument").textContent = fin.instrument || "—";
-      document.getElementById("metaLender").textContent = fin.lender && fin.rate ? `${fin.lender} @ ${fin.rate.toFixed(2)}%` : "—";
-      document.getElementById("metaRisk").textContent = risk.toFixed(2);
+      document.getElementById("metaLender").textContent = fin.lender && fin.rate != null ? `${fin.lender} @ ${safeFixed(fin.rate, 2)}%` : "—";
+      document.getElementById("metaRisk").textContent = safeFixed(risk, 2, "0.08");
       document.getElementById("metaCashDate").textContent = cont.expected_cash_date || "—";
       document.getElementById("metaFrozenBadge").classList.toggle("hidden", !fin.frozen);
 
@@ -1192,10 +1200,10 @@
         li.textContent = `Cargo condition warning: Telemetry marked '${phys.condition}'.`;
         alertList.appendChild(li);
       }
-      if (cont.buyer_risk > 0.3) {
+      if (cont.buyer_risk != null && Number(cont.buyer_risk) > 0.3) {
         hasAlerts = true;
         const li = document.createElement("li");
-        li.textContent = `Buyer credit risk elevated: Index at ${cont.buyer_risk.toFixed(2)} (threshold > 0.30).`;
+        li.textContent = `Buyer credit risk elevated: Index at ${safeFixed(cont.buyer_risk, 2)} (threshold > 0.30).`;
         alertList.appendChild(li);
       }
       alertCard.classList.toggle("hidden", !hasAlerts);
@@ -1211,7 +1219,7 @@
 
       // Update Registry Table
       document.getElementById("tableLiveStage").textContent = stage;
-      document.getElementById("tableLiveDrawn").textContent = `₹${(drawn / 100000).toFixed(1)}L`;
+      document.getElementById("tableLiveDrawn").textContent = `₹${safeFixed((drawn || 0) / 100000, 1)}L`;
       const baseLtv = STAGE_LTV[stage] || 0;
       const effLtv = Math.round(baseLtv * (1 - 0.4 * risk) * 100);
       document.getElementById("tableLiveLtv").textContent = `${effLtv}%`;
@@ -1222,10 +1230,11 @@
     }
 
     function renderLenderKPIs(drawn, risk) {
-      animateValue("kpiTotalDeployed", prevTotalDeployed, drawn, 500, (v) => `₹${(v / 100000).toFixed(1)}L`);
-      prevTotalDeployed = drawn;
+      const d = drawn != null && !isNaN(Number(drawn)) ? Number(drawn) : 0;
+      animateValue("kpiTotalDeployed", prevTotalDeployed, d, 500, (v) => `₹${safeFixed((v || 0) / 100000, 1)}L`);
+      prevTotalDeployed = d;
 
-      document.getElementById("kpiAvgRisk").textContent = risk.toFixed(2);
+      document.getElementById("kpiAvgRisk").textContent = safeFixed(risk, 2, "0.08");
       
       const fraudEl = document.getElementById("kpiFraudBlocked");
       fraudEl.textContent = fraudBlockedCount;
@@ -1242,16 +1251,14 @@
     function renderRiskGauge(risk, containerId) {
       const container = document.getElementById(containerId);
       if (!container) return;
-      let color = "#02C39A";
+      const r = risk != null && !isNaN(Number(risk)) ? Number(risk) : 0.08;
       let bg = "bg-emerald-100 text-emerald-800";
-      if (risk >= 0.6) {
-        color = "#E4572E";
+      if (r >= 0.6) {
         bg = "bg-red-100 text-red-800";
-      } else if (risk >= 0.3) {
-        color = "#EF9F27";
+      } else if (r >= 0.3) {
         bg = "bg-amber-100 text-amber-800";
       }
-      container.innerHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${bg}">${risk.toFixed(2)}</span>`;
+      container.innerHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${bg}">${safeFixed(r, 2)}</span>`;
     }
 
     // ==================== SECTION D: TIMELINE & CHART ====================
@@ -1557,13 +1564,14 @@
 
     function onAuctionBid(lender, rate) {
       let botKey = "Cautious";
-      if (lender.includes("Aggressive")) botKey = "Aggressive";
-      if (lender.includes("Balanced")) botKey = "Balanced";
+      const lName = String(lender || "");
+      if (lName.includes("Aggressive")) botKey = "Aggressive";
+      if (lName.includes("Balanced")) botKey = "Balanced";
 
       const rateEl = document.getElementById(`botRate${botKey}`);
       const card = document.getElementById(`botCard${botKey}`);
       if (rateEl) {
-        rateEl.textContent = `${rate.toFixed(2)}%`;
+        rateEl.textContent = `${safeFixed(rate, 2)}%`;
       }
       if (card) {
         card.classList.add("bg-emerald-100");
@@ -1572,11 +1580,13 @@
     }
 
     function onAuctionEnd(best, amount) {
-      document.getElementById("auctionSubtitle").textContent = `Auction Concluded — Winner: ${best.lender} @ ${best.rate.toFixed(2)}%`;
+      const winnerName = best?.lender || "Best Bidder";
+      const winnerRate = safeFixed(best?.rate, 2);
+      document.getElementById("auctionSubtitle").textContent = `Auction Concluded — Winner: ${winnerName} @ ${winnerRate}%`;
       
       let bestKey = "Cautious";
-      if (best.lender.includes("Aggressive")) bestKey = "Aggressive";
-      if (best.lender.includes("Balanced")) bestKey = "Balanced";
+      if (winnerName.includes("Aggressive")) bestKey = "Aggressive";
+      if (winnerName.includes("Balanced")) bestKey = "Balanced";
 
       ["Cautious", "Aggressive", "Balanced"].forEach(b => {
         const card = document.getElementById(`botCard${b}`);
@@ -1838,24 +1848,16 @@
       const voiceOn = document.getElementById("voiceCheckbox")?.checked;
       if (!voiceOn || !text) return;
 
-      fetch(`/speak?text=${encodeURIComponent(text.slice(0, 400))}`)
-        .then(res => {
-          if (res.ok) {
-            return res.blob().then(blob => {
-              const audio = new Audio(URL.createObjectURL(blob));
-              audio.play();
-            });
-          }
-          throw new Error("TTS fallback");
-        })
-        .catch(() => {
-          if ("speechSynthesis" in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.rate = 1.05;
-            window.speechSynthesis.speak(u);
-          }
-        });
+      try {
+        if ("speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.rate = 1.05;
+          window.speechSynthesis.speak(u);
+        }
+      } catch (e) {
+        // Speech synthesis not available or blocked by browser policy
+      }
     }
 
     // Hand-rolled Canvas Confetti Burst (~60 mint/navy particles, zero libraries)

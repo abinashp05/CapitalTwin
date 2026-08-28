@@ -1,8 +1,52 @@
 import crypto from "crypto";
-// @ts-ignore
-import { AssetRecord } from "../db/repositories/assetRepository";
-// @ts-ignore
-import { effectiveLtv } from "../state/assetRuntime";
+export interface AssetRecord {
+  id: string;
+  order_value?: number;
+  stage?: string;
+  contractual?: {
+    owner?: string;
+    buyer_risk?: number;
+    [key: string]: any;
+  };
+  physical?: {
+    condition?: string;
+    delay_days?: number;
+    [key: string]: any;
+  };
+  risk_index?: number;
+  [key: string]: any;
+}
+
+const BASE_LTV: Record<string, number> = {
+  PO_ISSUED: 0.5,
+  RAW_PROCURED: 0.55,
+  IN_PRODUCTION: 0.6,
+  FINISHED_GOODS: 0.65,
+  IN_TRANSIT: 0.75,
+  WAREHOUSED: 0.8,
+  DELIVERED: 0.85,
+  INVOICED: 0.9,
+  SETTLED: 0.0,
+};
+
+export function computeRisk(a: AssetRecord): number {
+  const buyer_risk = a.contractual?.buyer_risk ?? 0.15;
+  const delay_days = a.physical?.delay_days ?? 0;
+  const condition = a.physical?.condition ?? "OK";
+  const cond_factor = condition !== "OK" ? 0.7 : 0.0;
+  const delay_factor = Math.min(delay_days / 10.0, 1.0);
+  const raw = 0.4 * buyer_risk + 0.25 * delay_factor + 0.2 * cond_factor + 0.15 * 0.1;
+  const clamped = Math.max(0.0, Math.min(1.0, raw));
+  return Math.round(clamped * 100) / 100;
+}
+
+export function effectiveLtv(a: AssetRecord): number {
+  const stage = a.stage || "NEW";
+  const base = BASE_LTV[stage] ?? 0.0;
+  const risk = computeRisk(a);
+  const eff = base * (1.0 - 0.4 * risk);
+  return Math.round(eff * 1000) / 1000;
+}
 
 export interface LedgerBlock {
   asset_id: string;
