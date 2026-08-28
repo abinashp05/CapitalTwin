@@ -1,0 +1,6 @@
+{
+  "name": "CapitalTwin",
+  "description": "Agentic supply-chain financing platform with real-time digital twin lifecycle tracking, risk calculations, bank auction engine, and immutable hash-chained ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

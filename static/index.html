@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CapitalTwin — Agentic Supply-Chain Financing</title>
+  <meta name="description" content="Digital twin of goods tracking, safe lending sizing, reverse auction bank battle, and immutable ledger." />
+  
+  <!-- Vendored Tailwind & Chart.js per contract -->
+  <link rel="stylesheet" href="/vendor/tw.css" />
+  <script src="/vendor/chart.umd.js"></script>
+
+  <style>
+    :root {
+      --bg: #F7F9FC;
+      --navy: #1E2761;
+      --navy-light: #2A367D;
+      --mint: #02C39A;
+      --mint-dark: #00A884;
+      --coral: #E4572E;
+      --coral-dark: #C94620;
+      --card-border: #E8EDF6;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .ct-card {
+      background: #FFFFFF;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(30, 39, 97, 0.04);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .ct-card-hover:hover {
+      box-shadow: 0 6px 18px rgba(30, 39, 97, 0.08);
+    }
+
+    .btn-press:active {
+      transform: scale(0.97);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn-press:active, .ct-card, .pulse-dot, .shake-anim, .slide-in {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+      }
+    }
+
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .shake-anim {
+      animation: shake 0.3s ease-in-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-in {
+      animation: slideIn 0.25s ease-out forwards;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F1F5F9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+
+    .badge-tracker { background: #EEF2FF; color: #1E2761; border: 1px solid #C7D2FE; }
+    .badge-risk { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .badge-loan { background: #E6FAF5; color: #02C39A; border: 1px solid #A7F3D0; }
+    .badge-transition { background: #F3E8FF; color: #7C5CDB; border: 1px solid #DDD6FE; }
+    .badge-fraud { background: #FEE2E2; color: #E4572E; border: 1px solid #FECACA; }
+    .badge-assistant { background: #E6F7F3; color: #0B8F73; border: 1px solid #A7E3D5; }
+
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast-pill {
+      pointer-events: auto;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.2s ease-out;
+    }
+
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    .stage-item {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .stage-item:hover {
+      background-color: #F8FAFC;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- Full Width Coral Fraud Alert Banner -->
+  <div id="fraudBanner" class="hidden fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-6 py-4 shadow-xl flex items-center justify-between">
+    <div class="flex items-center space-x-3 max-w-5xl mx-auto">
+      <div class="p-2 bg-red-800 rounded-lg">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <div>
+        <p class="font-bold text-sm tracking-wide uppercase text-red-100">Fraud & Double-Financing Prevention Alert</p>
+        <p id="fraudBannerText" class="text-sm font-medium"></p>
+      </div>
+    </div>
+    <button onclick="hideFraudBanner()" class="text-white hover:text-red-200 text-xl font-bold px-3 py-1">&times;</button>
+  </div>
+
+  <!-- Toast Stack -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ==================== SECTION A: LOGIN SCREEN ==================== -->
+  <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+    <div class="ct-card w-full max-w-md p-8 sm:p-10 space-y-6">
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl text-white text-2xl font-black shadow-md" style="background: var(--navy);">
+          CT
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight" style="color: var(--navy);">CapitalTwin</h1>
+        <p class="text-xs uppercase tracking-wider font-semibold text-slate-500">The loan that travels with your goods</p>
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Quick Role Login</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="fillLogin('ravi', 'demo123')" class="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
+            Supplier<br/><span class="text-slate-500 text-[10px]">ravi</span>
+          </button>
+          <button type="button" onclick="fillLogin('lender', 'demo123')" class="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
+            Lender<br/><span class="text-slate-500 text-[10px]">lender</span>
+          </button>
+          <button type="button" onclick="fillLogin('admin', 'demo123')" class="px-3 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg transition text-center btn-press">
+            Admin<br/><span class="text-slate-500 text-[10px]">admin</span>
+          </button>
+        </div>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 pt-2">
+        <div>
+          <label for="usernameInput" class="block text-xs font-semibold text-slate-700 mb-1">Username</label>
+          <input id="usernameInput" type="text" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. ravi" />
+        </div>
+        <div>
+          <label for="passwordInput" class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+          <input id="passwordInput" type="password" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••" />
+        </div>
+
+        <div id="loginError" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-medium text-red-600"></div>
+
+        <button type="submit" id="loginBtn" class="w-full py-3 text-white font-medium rounded-lg text-sm shadow-md transition btn-press flex items-center justify-center space-x-2" style="background: var(--navy);">
+          <span>Sign In</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </form>
+
+      <div class="pt-2 border-t border-slate-100 text-center">
+        <p class="text-xs text-slate-500">demo accounts: <strong class="text-slate-700">ravi</strong> · <strong class="text-slate-700">lender</strong> · <strong class="text-slate-700">admin</strong> — password <strong class="text-slate-700">demo123</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APPLICATION LAYOUT ==================== -->
+  <div id="appContainer" class="hidden min-h-screen flex flex-col md:flex-row">
+    
+    <!-- SECTION C: SIDEBAR -->
+    <aside class="w-full md:w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+      <div class="p-6 border-b border-slate-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-lg text-white font-black flex items-center justify-center text-lg" style="background: var(--navy);">
+            CT
+          </div>
+          <div>
+            <span class="font-bold text-lg tracking-tight" style="color: var(--navy);">CapitalTwin</span>
+            <p id="sidebarRoleSubtitle" class="text-[11px] font-medium text-slate-500 truncate">Supplier portal · Ravi Textiles</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- + New Request button (hidden for lender) -->
+      <div class="p-4" id="newRequestContainer">
+        <button onclick="switchView('supplier'); focusAmountInput();" class="w-full py-2.5 px-4 text-white text-xs font-semibold rounded-full shadow-sm flex items-center justify-center space-x-1.5 transition btn-press" style="background: var(--navy);">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>+ New request</span>
+        </button>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-4 space-y-1">
+        <button id="navSupplier" onclick="switchView('supplier')" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:bg-slate-50">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          <span>Supplier Portal</span>
+        </button>
+        <button id="navLender" onclick="switchView('lender')" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:bg-slate-50">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          <span>Lender Console</span>
+        </button>
+        <button id="navControl" onclick="switchView('control')" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:bg-slate-50">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Control Room</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Bottom Options -->
+      <div class="p-4 border-t border-slate-100 space-y-2">
+        <label class="flex items-center space-x-2 text-xs font-medium text-slate-600 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+          <input type="checkbox" id="voiceCheckbox" checked class="rounded text-indigo-600 focus:ring-indigo-500" />
+          <span>Voice Audio (TTS)</span>
+        </label>
+        <button onclick="openSettingsModal()" class="w-full flex items-center space-x-2 text-xs font-medium text-slate-600 p-1.5 rounded hover:bg-slate-50 text-left">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+          <span>Settings</span>
+        </button>
+        <button onclick="openSupportModal()" class="w-full flex items-center space-x-2 text-xs font-medium text-slate-600 p-1.5 rounded hover:bg-slate-50 text-left">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Support & Docs</span>
+        </button>
+        <button onclick="handleLogout()" class="w-full flex items-center space-x-2 text-xs font-bold text-red-600 p-1.5 rounded hover:bg-red-50 text-left btn-press">
+          <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <span>Log out</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col min-w-0">
+      
+      <!-- SECTION C: TOP BAR -->
+      <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+        <!-- Disabled Search -->
+        <div class="relative w-72">
+          <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" disabled placeholder="Search twin ORD-123..." class="w-full pl-9 pr-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-400 cursor-not-allowed" />
+        </div>
+
+        <div class="flex items-center space-x-5">
+          <!-- Live Sync Status -->
+          <div class="flex items-center space-x-2 text-xs font-medium text-slate-600">
+            <span class="w-2.5 h-2.5 rounded-full pulse-dot" style="background: var(--mint);"></span>
+            <span>Live sync active</span>
+          </div>
+
+          <!-- User Chip -->
+          <div class="flex items-center space-x-2.5 pl-3 border-l border-slate-200">
+            <div id="userAvatar" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" style="background: var(--navy);">
+              RK
+            </div>
+            <div class="text-left leading-tight hidden sm:block">
+              <p id="userNameDisplay" class="text-xs font-bold text-slate-800">Ravi Kumar</p>
+              <p id="userOrgDisplay" class="text-[10px] font-medium text-slate-500">Ravi Textiles</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- VIEW CONTAINER -->
+      <main class="flex-1 p-6 overflow-y-auto custom-scrollbar">
+
+        <!-- ==================== SECTION D: SUPPLIER VIEW ==================== -->
+        <div id="supplierView" class="space-y-6 max-w-7xl mx-auto">
+          
+          <!-- Alert Card (when delay_days > 0 or condition != 'OK' or buyer_risk > 0.3) -->
+          <div id="supplierAlertCard" class="hidden ct-card p-4 border-l-4 border-red-500 bg-red-50/40 space-y-2">
+            <div class="flex items-center space-x-2 text-red-700 font-bold text-sm">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Operational Risk & Disruption Notice</span>
+            </div>
+            <ul id="supplierAlertList" class="list-disc list-inside text-xs text-red-600 space-y-1 font-medium pl-1"></ul>
+          </div>
+
+          <!-- Empty State Card (if stage === 'NEW') -->
+          <div id="supplierEmptyCard" class="hidden ct-card p-10 text-center space-y-4">
+            <div class="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center bg-indigo-50 text-indigo-600">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </div>
+            <div class="space-y-1">
+              <h2 class="text-lg font-bold text-slate-800">No live asset yet</h2>
+              <p class="text-xs text-slate-500 max-w-md mx-auto">Confirm the order from the Control room to initialize the digital twin for ORD-123.</p>
+            </div>
+            <div id="adminInitBtn" class="pt-2">
+              <button onclick="triggerEvent('ORDER_CONFIRMED')" class="px-5 py-2.5 text-xs font-semibold text-white rounded-lg shadow transition btn-press" style="background: var(--navy);">
+                Confirm Order (ORDER_CONFIRMED)
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Digital Twin Layout Grid -->
+          <div id="supplierActiveGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left Column: Available Financing Card + Chart -->
+            <div class="lg:col-span-2 space-y-6">
+              
+              <!-- Available Financing Card -->
+              <div class="ct-card p-6 space-y-5">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Available Financing Capacity</span>
+                    <h2 id="safeLimitHuge" class="text-4xl sm:text-5xl font-extrabold tracking-tight mt-1" style="color: var(--mint-dark);">
+                      ₹0
+                    </h2>
+                  </div>
+                  <div class="text-right">
+                    <span class="text-xs font-semibold text-slate-400">Digital Twin</span>
+                    <p class="text-sm font-bold text-slate-800">ORD-123</p>
+                    <p class="text-[11px] text-slate-500">10,000 t-shirts · ₹50L</p>
+                  </div>
+                </div>
+
+                <!-- Meta Line -->
+                <div class="p-3.5 bg-slate-50 rounded-xl flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-slate-600 border border-slate-100">
+                  <div>Drawn: <strong id="metaDrawn" class="text-slate-800">₹0L</strong></div>
+                  <div>•</div>
+                  <div>Instrument: <strong id="metaInstrument" class="text-slate-800">—</strong></div>
+                  <div>•</div>
+                  <div>Lender: <strong id="metaLender" class="text-slate-800">—</strong></div>
+                  <div>•</div>
+                  <div>Risk Index: <strong id="metaRisk" class="text-slate-800">0.08</strong></div>
+                  <div>•</div>
+                  <div>Expected Cash: <strong id="metaCashDate" class="text-slate-800">—</strong></div>
+                  <div id="metaFrozenBadge" class="hidden px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[10px] tracking-wider">
+                    DRAWDOWN FROZEN
+                  </div>
+                </div>
+
+                <!-- Financing Request Form -->
+                <div class="pt-2 space-y-3">
+                  <label class="block text-xs font-bold text-slate-700">Request Drawdown Amount</label>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <div class="relative flex-1">
+                      <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                      <input id="financingAmountInput" type="number" step="10000" placeholder="Leave blank for full capacity" class="w-full pl-8 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <button type="button" onclick="setAmountPercent(0.25)" class="px-3 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition btn-press">25%</button>
+                      <button type="button" onclick="setAmountPercent(0.50)" class="px-3 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition btn-press">50%</button>
+                      <button type="button" onclick="setAmountPercent(1.00)" class="px-3 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition btn-press">Max</button>
+                    </div>
+                    <button id="requestFinancingBtn" onclick="handleFinancingRequest()" class="px-5 py-2.5 text-white text-xs font-bold rounded-lg shadow transition btn-press flex items-center justify-center space-x-1" style="background: var(--mint);">
+                      <span>Request financing →</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Financing Capacity vs Stage Chart -->
+              <div class="ct-card p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-800">Dynamic Headroom Curve</h3>
+                    <p class="text-xs text-slate-500">Order value ceiling (dashed) vs. dynamic safe-limit capacity per stage</p>
+                  </div>
+                  <span class="text-xs font-medium text-slate-400">Chart.js Realtime</span>
+                </div>
+                <div class="h-64 w-full relative">
+                  <canvas id="financingChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Vertical Timeline & AI Agents -->
+            <div class="space-y-6">
+              
+              <!-- Lifecycle Timeline -->
+              <div class="ct-card p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-bold text-slate-800">Supply Chain Lifecycle</h3>
+                  <span class="text-[11px] font-medium text-slate-400">Click stage to ask AI</span>
+                </div>
+
+                <div id="timelineContainer" class="space-y-1 text-xs">
+                  <!-- Generated by JS -->
+                </div>
+              </div>
+
+              <!-- AI Agents Feed -->
+              <div class="ct-card p-6 space-y-4 flex flex-col h-[480px]">
+                <div class="flex items-center justify-between shrink-0">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 rounded-full" style="background: var(--navy);"></span>
+                    <h3 class="text-sm font-bold text-slate-800">AI Agents Live Feed</h3>
+                  </div>
+                  <span class="text-[11px] font-medium text-slate-400">Newest first (max 25)</span>
+                </div>
+
+                <div id="agentsFeedList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+                  <!-- Feed items injected here -->
+                </div>
+
+                <!-- Ask CapitalTwin Input -->
+                <div class="shrink-0 pt-2 border-t border-slate-100">
+                  <form onsubmit="handleAskTwin(event)" class="flex gap-2">
+                    <input id="askTwinInput" type="text" placeholder="Ask CapitalTwin about ORD-123..." class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <button type="submit" id="askTwinBtn" class="px-3.5 py-2 text-white text-xs font-bold rounded-lg transition btn-press" style="background: var(--navy);">
+                      Ask
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== SECTION E: LENDER VIEW ==================== -->
+        <div id="lenderView" class="hidden space-y-6 max-w-7xl mx-auto">
+          
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-slate-900">Portfolio Overview</h1>
+            <p class="text-xs text-slate-500">Real-time credit sizing, active risk telemetry, and live reverse auction bidding</p>
+          </div>
+
+          <!-- 4 KPI Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="ct-card p-5 space-y-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Deployed</span>
+              <p id="kpiTotalDeployed" class="text-2xl font-extrabold" style="color: var(--navy);">₹0L</p>
+              <p class="text-[10px] text-slate-500">Principal actively financed</p>
+            </div>
+            <div class="ct-card p-5 space-y-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Assets Monitored</span>
+              <p class="text-2xl font-extrabold text-slate-800">1 live + 4 watch</p>
+              <p class="text-[10px] text-slate-500">Active digital twins</p>
+            </div>
+            <div class="ct-card p-5 space-y-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Avg Risk Index</span>
+              <p id="kpiAvgRisk" class="text-2xl font-extrabold text-slate-800">0.08</p>
+              <p class="text-[10px] text-slate-500">Weighted portfolio score</p>
+            </div>
+            <div id="kpiFraudCard" class="ct-card p-5 space-y-1 transition-colors duration-300">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Fraud Blocked</span>
+              <p id="kpiFraudBlocked" class="text-2xl font-extrabold text-red-600">0</p>
+              <p class="text-[10px] text-slate-500">Ledger-enforced double claims</p>
+            </div>
+          </div>
+
+          <!-- Registry Table -->
+          <div class="ct-card p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-800">Registry & Credit Status</h3>
+              <span class="text-xs font-semibold text-slate-500">5 Assets Total</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-slate-100 text-slate-400 uppercase font-bold text-[10px]">
+                    <th class="pb-3 px-2">Asset</th>
+                    <th class="pb-3 px-2">Stage</th>
+                    <th class="pb-3 px-2 text-right">Order Value</th>
+                    <th class="pb-3 px-2 text-right">Drawn</th>
+                    <th class="pb-3 px-2 text-right">LTV %</th>
+                    <th class="pb-3 px-2 text-center">Risk Gauge</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                  <!-- Live ORD-123 Row -->
+                  <tr class="bg-indigo-50/40">
+                    <td class="py-3 px-2 font-bold text-slate-900 flex items-center space-x-2">
+                      <span>ORD-123</span>
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold text-emerald-700 bg-emerald-100">LIVE</span>
+                    </td>
+                    <td class="py-3 px-2">
+                      <div class="flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full pulse-dot" style="background: var(--navy);"></span>
+                        <span id="tableLiveStage" class="font-bold text-slate-900">PO_ISSUED</span>
+                      </div>
+                    </td>
+                    <td class="py-3 px-2 text-right font-bold text-slate-900">₹50L</td>
+                    <td id="tableLiveDrawn" class="py-3 px-2 text-right font-bold" style="color: var(--mint-dark);">₹0L</td>
+                    <td id="tableLiveLtv" class="py-3 px-2 text-right font-bold">48%</td>
+                    <td class="py-3 px-2 text-center">
+                      <div id="tableLiveRiskGauge" class="inline-flex items-center justify-center"></div>
+                    </td>
+                  </tr>
+
+                  <!-- Static Gray Rows -->
+                  <tr class="text-slate-500">
+                    <td class="py-3 px-2 font-medium">AST-8941</td>
+                    <td class="py-3 px-2">WAREHOUSED</td>
+                    <td class="py-3 px-2 text-right">₹54L</td>
+                    <td class="py-3 px-2 text-right">₹12L</td>
+                    <td class="py-3 px-2 text-right">22%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">0.14</span></td>
+                  </tr>
+                  <tr class="text-slate-500">
+                    <td class="py-3 px-2 font-medium">AST-8810</td>
+                    <td class="py-3 px-2">IN_TRANSIT</td>
+                    <td class="py-3 px-2 text-right">₹89L</td>
+                    <td class="py-3 px-2 text-right">₹65L</td>
+                    <td class="py-3 px-2 text-right">73%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">0.42</span></td>
+                  </tr>
+                  <tr class="text-slate-500">
+                    <td class="py-3 px-2 font-medium">AST-8755</td>
+                    <td class="py-3 px-2">INVOICED</td>
+                    <td class="py-3 px-2 text-right">₹220L</td>
+                    <td class="py-3 px-2 text-right">₹198L</td>
+                    <td class="py-3 px-2 text-right">90%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800">0.68</span></td>
+                  </tr>
+                  <tr class="text-slate-500">
+                    <td class="py-3 px-2 font-medium">AST-8622</td>
+                    <td class="py-3 px-2">PO_ISSUED</td>
+                    <td class="py-3 px-2 text-right">₹31L</td>
+                    <td class="py-3 px-2 text-right">₹0L</td>
+                    <td class="py-3 px-2 text-right">0%</td>
+                    <td class="py-3 px-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">0.10</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Bank Battle Arena & Exposure Ledger -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Bank Battle Cards -->
+            <div class="ct-card p-6 space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-800">Bank Battle — Reverse Auction</h3>
+                  <p id="auctionSubtitle" class="text-xs text-slate-500">Lenders compete to offer the lowest interest rate</p>
+                </div>
+                <div id="auctionAmountBadge" class="hidden px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Financing: ₹0
+                </div>
+              </div>
+
+              <!-- Three Bot Cards -->
+              <div class="grid grid-cols-3 gap-3">
+                <div id="botCardCautious" class="ct-card p-4 text-center space-y-2 border transition-all duration-200">
+                  <p class="text-xs font-bold text-slate-700 truncate">Cautious Bank</p>
+                  <p id="botRateCautious" class="text-2xl font-black text-slate-800">14.00%</p>
+                  <span id="botTagCautious" class="inline-block text-[10px] font-bold px-2 py-0.5 rounded text-slate-500 bg-slate-100">Floor 11.0%</span>
+                </div>
+                <div id="botCardAggressive" class="ct-card p-4 text-center space-y-2 border transition-all duration-200">
+                  <p class="text-xs font-bold text-slate-700 truncate">Aggressive NBFC</p>
+                  <p id="botRateAggressive" class="text-2xl font-black text-slate-800">13.00%</p>
+                  <span id="botTagAggressive" class="inline-block text-[10px] font-bold px-2 py-0.5 rounded text-slate-500 bg-slate-100">Floor 8.5%</span>
+                </div>
+                <div id="botCardBalanced" class="ct-card p-4 text-center space-y-2 border transition-all duration-200">
+                  <p class="text-xs font-bold text-slate-700 truncate">Balanced Fintech</p>
+                  <p id="botRateBalanced" class="text-2xl font-black text-slate-800">13.50%</p>
+                  <span id="botTagBalanced" class="inline-block text-[10px] font-bold px-2 py-0.5 rounded text-slate-500 bg-slate-100">Floor 9.5%</span>
+                </div>
+              </div>
+
+              <!-- Accept Best Offer Button Container -->
+              <div id="acceptOfferContainer" class="hidden pt-3 text-center">
+                <button id="acceptOfferBtn" onclick="handleAcceptOffer()" class="w-full py-3 px-4 text-white text-sm font-bold rounded-xl shadow-lg transition btn-press flex items-center justify-center space-x-2" style="background: var(--mint);">
+                  <span>Accept Best Offer → Disburse Funds</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Exposure Ledger -->
+            <div class="ct-card p-6 space-y-4 flex flex-col h-[400px]">
+              <div class="flex items-center justify-between shrink-0">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-800">Exposure Ledger</h3>
+                  <p class="text-xs text-slate-500">Real-time immutable cryptographic chain</p>
+                </div>
+                <span id="ledgerChainOkBadge" class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800">chain verified ✓</span>
+              </div>
+
+              <div id="ledgerList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+                <!-- Ledger entries injected here -->
+              </div>
+
+              <div class="shrink-0 pt-2 border-t border-slate-100 text-center">
+                <button onclick="openFullLedgerModal()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                  View full ledger history & cryptographic tree &rarr;
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ==================== SECTION F: CONTROL VIEW ==================== -->
+        <div id="controlView" class="hidden space-y-6 max-w-7xl mx-auto">
+          
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-xl font-bold tracking-tight text-slate-900">Control Room & Simulation</h1>
+              <p class="text-xs text-slate-500">Trigger physical lifecycle milestones, stress tests, transit delays, and fraud attempts</p>
+            </div>
+            <button onclick="handleReset()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-lg transition btn-press flex items-center space-x-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Reset Demo State</span>
+            </button>
+          </div>
+
+          <!-- 12 Action Buttons Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            <button onclick="triggerEventWithSpinner('ORDER_CONFIRMED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">1. Confirm order</span>
+                <span class="text-[10px] font-mono text-slate-400">PO_ISSUED</span>
+              </div>
+              <p class="text-xs text-slate-500">Buyer BigRetail issues Purchase Order for 10k units</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('RAW_PROCURED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">2. Buy raw material</span>
+                <span class="text-[10px] font-mono text-slate-400">RAW_PROCURED</span>
+              </div>
+              <p class="text-xs text-slate-500">Yarn and dyes purchased; LTV elevated to 55%</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('PRODUCED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">3. Finish production</span>
+                <span class="text-[10px] font-mono text-slate-400">FINISHED_GOODS</span>
+              </div>
+              <p class="text-xs text-slate-500">10,000 t-shirts finished; LTV elevated to 65%</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('SHIPPED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">4. Ship</span>
+                <span class="text-[10px] font-mono text-slate-400">IN_TRANSIT</span>
+              </div>
+              <p class="text-xs text-slate-500">GPS tracker online on NH-48; LTV rises to 75%</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('DELAYED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition border-amber-200 bg-amber-50/20">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-900">5. Delay shipment +3d</span>
+                <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">+3 Days</span>
+              </div>
+              <p class="text-xs text-slate-500">Highway delay increases risk score and compresses limit</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('TEMP_SPIKE', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition border-amber-200 bg-amber-50/20">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-900">6. Temperature spike</span>
+                <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Sensor Alert</span>
+              </div>
+              <p class="text-xs text-slate-500">Container sensor alert; condition degraded</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('WAREHOUSED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">7. Move to warehouse</span>
+                <span class="text-[10px] font-mono text-slate-400">WAREHOUSED</span>
+              </div>
+              <p class="text-xs text-slate-500">Goods stored at Chennai WH-7; 80% LTV unlocked</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('DELIVERED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">8. Deliver</span>
+                <span class="text-[10px] font-mono text-slate-400">DELIVERED</span>
+              </div>
+              <p class="text-xs text-slate-500">Proof of Delivery logged; delay cleared; 85% LTV</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('INVOICED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">9. Raise invoice</span>
+                <span class="text-[10px] font-mono text-slate-400">INVOICED</span>
+              </div>
+              <p class="text-xs text-slate-500">Net-60 invoice created; maximum 90% LTV headroom</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('RECEIVABLE_DELAYED', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition border-amber-200 bg-amber-50/20">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-900">10. Buyer misses day-60</span>
+                <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Credit Stress</span>
+              </div>
+              <p class="text-xs text-slate-500">Buyer credit risk spikes; safe capacity contracts</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('BUYER_PAID', this)" class="ct-card ct-card-hover p-4 text-left space-y-1.5 btn-press transition border-emerald-200 bg-emerald-50/20">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-900">11. Buyer pays</span>
+                <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">SETTLED</span>
+              </div>
+              <p class="text-xs text-slate-500">Payment received; loan settles itself via smart escrow</p>
+            </button>
+
+            <button onclick="triggerEventWithSpinner('DOUBLE_FINANCE_ATTEMPT', this)" class="p-4 text-left space-y-1.5 btn-press transition rounded-xl text-white shadow-md" style="background: var(--coral);">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold">12. Attempt double financing</span>
+                <span class="text-[10px] font-black bg-red-900/60 px-1.5 py-0.5 rounded">FRAUD TEST</span>
+              </div>
+              <p class="text-xs text-red-100">Unauthorized third-party attempts to pledge same asset</p>
+            </button>
+
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== SECTION F: AUTOPILOT FLOATING PILL ==================== -->
+  <div id="autopilotFloatingPill" class="fixed bottom-6 right-6 z-40">
+    <button onclick="advanceAutopilot()" class="px-5 py-3 rounded-full text-white text-xs font-bold shadow-2xl flex items-center space-x-2.5 transition btn-press border-2 border-white/20" style="background: var(--navy);">
+      <span id="autopilotSpinner" class="hidden w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      <span id="autopilotLabel">▶ Next: Confirm order — Step 1/11</span>
+    </button>
+  </div>
+
+  <!-- MODAL: Full Ledger History -->
+  <div id="ledgerModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="ct-card w-full max-w-2xl max-h-[85vh] p-6 space-y-4 flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Cryptographic Exposure Ledger Tree</h3>
+          <p class="text-xs text-slate-500">SHA-256 tamper-evident hash links across all financial operations</p>
+        </div>
+        <button onclick="closeLedgerModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+      </div>
+
+      <div id="modalLedgerContent" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 font-mono text-xs text-slate-700">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Settings -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="ct-card w-full max-w-md p-6 space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900">CapitalTwin Settings</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs text-slate-600">
+        <p><strong>Platform:</strong> CapitalTwin v2.5 (Agentic Supply-Chain Digital Twin)</p>
+        <p><strong>WebSocket:</strong> <span id="settingsWsStatus" class="font-mono text-emerald-600">Connected</span></p>
+        <p><strong>AI Engine:</strong> Gemini 3.7 Flash + ElevenLabs TTS Support</p>
+        <p><strong>Tamper Guard:</strong> SHA-256 Linear Merkle-Chain Protocol Active</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Support -->
+  <div id="supportModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="ct-card w-full max-w-md p-6 space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900">Support & Documentation</h3>
+        <button onclick="closeSupportModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+      </div>
+      <div class="space-y-2 text-xs text-slate-600">
+        <p>For assistance, demo scenarios, or custom NBFC API integration docs, contact the CapitalTwin engineering team.</p>
+        <div class="p-3 bg-slate-50 rounded-lg space-y-1">
+          <p><strong>Demo Guide:</strong> Use the Autopilot button in the lower right to run through the entire 11-step lifecycle automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    // Global Constants
+    const STAGE_ORDER = [
+      "PO_ISSUED",
+      "RAW_PROCURED",
+      "IN_PRODUCTION",
+      "FINISHED_GOODS",
+      "IN_TRANSIT",
+      "WAREHOUSED",
+      "DELIVERED",
+      "INVOICED",
+      "SETTLED"
+    ];
+
+    const STAGE_LTV = {
+      PO_ISSUED: 0.50,
+      RAW_PROCURED: 0.55,
+      IN_PRODUCTION: 0.60,
+      FINISHED_GOODS: 0.65,
+      IN_TRANSIT: 0.75,
+      WAREHOUSED: 0.80,
+      DELIVERED: 0.85,
+      INVOICED: 0.90,
+      SETTLED: 0.0
+    };
+
+    const STAGE_NAMES = {
+      PO_ISSUED: "PO Issued",
+      RAW_PROCURED: "Raw Procured",
+      IN_PRODUCTION: "In Production",
+      FINISHED_GOODS: "Finished Goods",
+      IN_TRANSIT: "In Transit",
+      WAREHOUSED: "Warehoused",
+      DELIVERED: "Delivered",
+      INVOICED: "Invoiced",
+      SETTLED: "Settled"
+    };
+
+    const STAGE_CAPTIONS = {
+      PO_ISSUED: "Purchase Order confirmed by BigRetail",
+      RAW_PROCURED: "Yarn & dye procured at factory",
+      IN_PRODUCTION: "Garment manufacturing & assembly underway",
+      FINISHED_GOODS: "10,000 t-shirts finished & quality certified",
+      IN_TRANSIT: "GPS container dispatch on NH-48",
+      WAREHOUSED: "Storage checked-in at Chennai WH-7",
+      DELIVERED: "Proof of Delivery logged at BigRetail DC",
+      INVOICED: "Commercial net-60 invoice raised",
+      SETTLED: "Buyer payment clears & loan settles itself"
+    };
+
+    const AGENT_COLORS = {
+      Tracker: "#1E2761",
+      Risk: "#EF9F27",
+      Loan: "#02C39A",
+      Transition: "#7C5CDB",
+      Fraud: "#E4572E",
+      Assistant: "#0B8F73"
+    };
+
+    // State Variables
+    let currentUser = null;
+    let currentView = "supplier";
+    let assetState = null;
+    let ledgerRecords = [];
+    let fraudBlockedCount = 0;
+    let prevFraudCount = 0;
+    let prevSafeLimit = 0;
+    let prevTotalDeployed = 0;
+    let ws = null;
+    let chartInstance = null;
+    let waitingForAuction = false;
+
+    // Autopilot 11 Steps
+    const AUTOPILOT_STEPS = [
+      { name: "Confirm order", type: "event", eventType: "ORDER_CONFIRMED" },
+      { name: "Request financing", type: "financing_request" },
+      { name: "Accept best offer", type: "financing_accept" },
+      { name: "Buy raw material", type: "event", eventType: "RAW_PROCURED" },
+      { name: "Finish production", type: "event", eventType: "PRODUCED" },
+      { name: "Ship", type: "event", eventType: "SHIPPED" },
+      { name: "Delay shipment", type: "event", eventType: "DELAYED" },
+      { name: "Deliver", type: "event", eventType: "DELIVERED" },
+      { name: "Raise invoice", type: "event", eventType: "INVOICED" },
+      { name: "Attempt double financing", type: "event", eventType: "DOUBLE_FINANCE_ATTEMPT" },
+      { name: "Buyer pays", type: "event", eventType: "BUYER_PAID" }
+    ];
+    let autopilotIndex = 0;
+
+    // Initialization
+    window.addEventListener("DOMContentLoaded", () => {
+      initChart();
+      renderTimeline();
+      
+      const stored = sessionStorage.getItem("capitaltwin_user");
+      if (stored) {
+        try {
+          currentUser = JSON.parse(stored);
+          showApp();
+        } catch {
+          showLogin();
+        }
+      } else {
+        showLogin();
+      }
+    });
+
+    // ==================== SECTION A: AUTHENTICATION ====================
+    function fillLogin(u, p) {
+      document.getElementById("usernameInput").value = u;
+      document.getElementById("passwordInput").value = p;
+    }
+
+    async function handleLogin(e) {
+      if (e) e.preventDefault();
+      const u = document.getElementById("usernameInput").value.trim();
+      const p = document.getElementById("passwordInput").value.trim();
+      const errBox = document.getElementById("loginError");
+      errBox.classList.add("hidden");
+
+      try {
+        const res = await fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          currentUser = data;
+          sessionStorage.setItem("capitaltwin_user", JSON.stringify(currentUser));
+          showApp();
+        } else {
+          errBox.textContent = data.why || "Invalid username or password";
+          errBox.classList.remove("hidden");
+        }
+      } catch (err) {
+        errBox.textContent = "Network error connecting to backend";
+        errBox.classList.remove("hidden");
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem("capitaltwin_user");
+      currentUser = null;
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      showLogin();
+    }
+
+    function showLogin() {
+      document.getElementById("loginScreen").classList.remove("hidden");
+      document.getElementById("appContainer").classList.add("hidden");
+    }
+
+    function showApp() {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("appContainer").classList.remove("hidden");
+
+      // Update Top Bar & Sidebar
+      document.getElementById("userNameDisplay").textContent = currentUser.name;
+      document.getElementById("userOrgDisplay").textContent = currentUser.org;
+      const initials = currentUser.name.split(" ").map(n => n[0]).join("");
+      document.getElementById("userAvatar").textContent = initials;
+
+      // Role Gating
+      const role = currentUser.role;
+      const navSupplier = document.getElementById("navSupplier");
+      const navLender = document.getElementById("navLender");
+      const navControl = document.getElementById("navControl");
+      const newReq = document.getElementById("newRequestContainer");
+      const roleSub = document.getElementById("sidebarRoleSubtitle");
+
+      if (role === "supplier") {
+        roleSub.textContent = `Supplier portal · ${currentUser.org}`;
+        navSupplier.classList.remove("hidden");
+        navLender.classList.add("hidden");
+        navControl.classList.add("hidden");
+        newReq.classList.remove("hidden");
+        switchView("supplier");
+      } else if (role === "lender") {
+        roleSub.textContent = `Lender console · ${currentUser.org}`;
+        navSupplier.classList.add("hidden");
+        navLender.classList.remove("hidden");
+        navControl.classList.add("hidden");
+        newReq.classList.add("hidden");
+        switchView("lender");
+      } else {
+        roleSub.textContent = "Demo control · CapitalTwin";
+        navSupplier.classList.remove("hidden");
+        navLender.classList.remove("hidden");
+        navControl.classList.remove("hidden");
+        newReq.classList.remove("hidden");
+        switchView("supplier");
+      }
+
+      initWebSocket();
+      fetchInitialData();
+    }
+
+    // ==================== SECTION B: VIEW SWITCHING & ROLE GATING ====================
+    function switchView(target) {
+      const role = currentUser?.role;
+      if (role === "supplier" && target !== "supplier") return;
+      if (role === "lender" && target !== "lender") return;
+
+      currentView = target;
+      document.getElementById("supplierView").classList.toggle("hidden", target !== "supplier");
+      document.getElementById("lenderView").classList.toggle("hidden", target !== "lender");
+      document.getElementById("controlView").classList.toggle("hidden", target !== "control");
+
+      // Update active nav styling
+      ["Supplier", "Lender", "Control"].forEach(v => {
+        const btn = document.getElementById(`nav${v}`);
+        if (btn) {
+          if (target.toLowerCase() === v.toLowerCase()) {
+            btn.className = "w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-xs font-bold transition bg-indigo-50 text-indigo-900";
+          } else {
+            btn.className = "w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition text-slate-600 hover:bg-slate-50";
+          }
+        }
+      });
+
+      if (target === "supplier" && chartInstance) {
+        setTimeout(() => chartInstance.resize(), 50);
+      }
+    }
+
+    function focusAmountInput() {
+      setTimeout(() => {
+        const inp = document.getElementById("financingAmountInput");
+        if (inp) inp.focus();
+      }, 100);
+    }
+
+    // ==================== SECTION G: WEBSOCKET & NETWORK ====================
+    function initWebSocket() {
+      if (ws) return;
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${proto}//${location.host}/ws/live`;
+      
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById("settingsWsStatus").textContent = "Connected (Live)";
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleLiveMessage(msg);
+        } catch (e) {
+          console.error("WS Parse error", e);
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById("settingsWsStatus").textContent = "Disconnected (Reconnecting...)";
+        ws = null;
+        setTimeout(initWebSocket, 2500);
+      };
+
+      ws.onerror = () => {
+        if (ws) ws.close();
+      };
+    }
+
+    async function fetchInitialData() {
+      try {
+        const [assetRes, ledgerRes] = await Promise.all([
+          fetch("/asset/ORD-123"),
+          fetch("/ledger/ORD-123")
+        ]);
+        if (assetRes.ok) {
+          const aData = await assetRes.json();
+          handleLiveMessage({ kind: "twin_update", asset: aData.asset, meta: aData.meta });
+        }
+        if (ledgerRes.ok) {
+          const lData = await ledgerRes.json();
+          handleLiveMessage({ kind: "ledger_update", records: lData.records });
+        }
+      } catch (e) {
+        console.error("Fetch initial error", e);
+      }
+    }
+
+    function handleLiveMessage(msg) {
+      if (msg.kind === "twin_update") {
+        assetState = msg.asset;
+        if (msg.meta) {
+          fraudBlockedCount = msg.meta.fraud_blocked;
+        }
+        renderTwin();
+      } else if (msg.kind === "agent_message") {
+        addAgentMessage(msg.agent, msg.reason, msg.ts);
+        
+        // Blocked check -> Shake full-width banner
+        if (msg.reason && msg.reason.includes("BLOCKED")) {
+          showFraudBanner(msg.reason);
+        }
+
+        // Settled itself check -> Confetti
+        if (msg.reason && msg.reason.includes("settled itself")) {
+          launchConfetti();
+          showToast("Loan settled itself via smart escrow", "mint");
+        }
+
+        // Voice TTS
+        if (["Risk", "Fraud", "Assistant"].includes(msg.agent)) {
+          speak(msg.reason);
+        }
+      } else if (msg.kind === "auction_start") {
+        onAuctionStart(msg.amount);
+      } else if (msg.kind === "bid") {
+        onAuctionBid(msg.lender, msg.rate);
+      } else if (msg.kind === "auction_end") {
+        onAuctionEnd(msg.best, msg.amount);
+      } else if (msg.kind === "ledger_update") {
+        ledgerRecords = msg.records || [];
+        renderLedger();
+      }
+    }
+
+    // ==================== RENDERING LOGIC ====================
+    function renderTwin() {
+      if (!assetState) return;
+
+      const stage = assetState.stage || "NEW";
+      const isNew = stage === "NEW";
+
+      document.getElementById("supplierEmptyCard").classList.toggle("hidden", !isNew);
+      document.getElementById("supplierActiveGrid").classList.toggle("hidden", isNew);
+
+      // Admin button inside empty card
+      const adminInitBtn = document.getElementById("adminInitBtn");
+      if (adminInitBtn) {
+        adminInitBtn.classList.toggle("hidden", currentUser?.role !== "admin");
+      }
+
+      if (isNew) return;
+
+      const fin = assetState.financial || {};
+      const phys = assetState.physical || {};
+      const cont = assetState.contractual || {};
+      const safeLimit = fin.safe_limit || 0;
+      const drawn = fin.drawn || 0;
+      const risk = assetState.risk_index || 0.08;
+
+      // Available Financing Count-up
+      animateValue("safeLimitHuge", prevSafeLimit, safeLimit, 600, (v) => "₹" + formatIndian(v));
+      prevSafeLimit = safeLimit;
+
+      // Meta line
+      document.getElementById("metaDrawn").textContent = `₹${(drawn / 100000).toFixed(1)}L`;
+      document.getElementById("metaInstrument").textContent = fin.instrument || "—";
+      document.getElementById("metaLender").textContent = fin.lender && fin.rate ? `${fin.lender} @ ${fin.rate.toFixed(2)}%` : "—";
+      document.getElementById("metaRisk").textContent = risk.toFixed(2);
+      document.getElementById("metaCashDate").textContent = cont.expected_cash_date || "—";
+      document.getElementById("metaFrozenBadge").classList.toggle("hidden", !fin.frozen);
+
+      // Alert Card
+      const alertCard = document.getElementById("supplierAlertCard");
+      const alertList = document.getElementById("supplierAlertList");
+      alertList.innerHTML = "";
+      let hasAlerts = false;
+
+      if (phys.delay_days > 0) {
+        hasAlerts = true;
+        const li = document.createElement("li");
+        li.textContent = `Transit delay detected: +${phys.delay_days} days logged on logistics route.`;
+        alertList.appendChild(li);
+      }
+      if (phys.condition && phys.condition !== "OK") {
+        hasAlerts = true;
+        const li = document.createElement("li");
+        li.textContent = `Cargo condition warning: Telemetry marked '${phys.condition}'.`;
+        alertList.appendChild(li);
+      }
+      if (cont.buyer_risk > 0.3) {
+        hasAlerts = true;
+        const li = document.createElement("li");
+        li.textContent = `Buyer credit risk elevated: Index at ${cont.buyer_risk.toFixed(2)} (threshold > 0.30).`;
+        alertList.appendChild(li);
+      }
+      alertCard.classList.toggle("hidden", !hasAlerts);
+
+      // Update Timeline
+      updateTimeline(stage);
+
+      // Update Chart
+      updateChart(stage, risk, drawn);
+
+      // Update Lender View KPIs
+      renderLenderKPIs(drawn, risk);
+
+      // Update Registry Table
+      document.getElementById("tableLiveStage").textContent = stage;
+      document.getElementById("tableLiveDrawn").textContent = `₹${(drawn / 100000).toFixed(1)}L`;
+      const baseLtv = STAGE_LTV[stage] || 0;
+      const effLtv = Math.round(baseLtv * (1 - 0.4 * risk) * 100);
+      document.getElementById("tableLiveLtv").textContent = `${effLtv}%`;
+      renderRiskGauge(risk, "tableLiveRiskGauge");
+
+      // Update Autopilot label
+      updateAutopilotLabel();
+    }
+
+    function renderLenderKPIs(drawn, risk) {
+      animateValue("kpiTotalDeployed", prevTotalDeployed, drawn, 500, (v) => `₹${(v / 100000).toFixed(1)}L`);
+      prevTotalDeployed = drawn;
+
+      document.getElementById("kpiAvgRisk").textContent = risk.toFixed(2);
+      
+      const fraudEl = document.getElementById("kpiFraudBlocked");
+      fraudEl.textContent = fraudBlockedCount;
+      if (fraudBlockedCount > prevFraudCount) {
+        const card = document.getElementById("kpiFraudCard");
+        card.classList.add("bg-red-100", "shake-anim");
+        setTimeout(() => {
+          card.classList.remove("bg-red-100", "shake-anim");
+        }, 500);
+        prevFraudCount = fraudBlockedCount;
+      }
+    }
+
+    function renderRiskGauge(risk, containerId) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      let color = "#02C39A";
+      let bg = "bg-emerald-100 text-emerald-800";
+      if (risk >= 0.6) {
+        color = "#E4572E";
+        bg = "bg-red-100 text-red-800";
+      } else if (risk >= 0.3) {
+        color = "#EF9F27";
+        bg = "bg-amber-100 text-amber-800";
+      }
+      container.innerHTML = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${bg}">${risk.toFixed(2)}</span>`;
+    }
+
+    // ==================== SECTION D: TIMELINE & CHART ====================
+    function renderTimeline() {
+      const container = document.getElementById("timelineContainer");
+      container.innerHTML = "";
+
+      STAGE_ORDER.forEach((st, idx) => {
+        const item = document.createElement("div");
+        item.className = "stage-item p-2.5 rounded-xl border border-transparent flex items-center space-x-3";
+        item.id = `timelineStage_${st}`;
+        item.onclick = () => askStageExplanation(st);
+
+        item.innerHTML = `
+          <div id="timelineIcon_${st}" class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] bg-slate-100 text-slate-400 shrink-0">
+            ${idx + 1}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center space-x-2">
+              <span id="timelineTitle_${st}" class="font-bold text-slate-700">${STAGE_NAMES[st]}</span>
+              <span id="timelineTag_${st}" class="hidden px-1.5 py-0.2 rounded text-[9px] font-bold text-white tracking-wider" style="background: var(--navy);">CURRENT</span>
+            </div>
+            <p class="text-[11px] text-slate-400 truncate">${STAGE_CAPTIONS[st]}</p>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function updateTimeline(currentStage) {
+      const currIdx = STAGE_ORDER.indexOf(currentStage);
+
+      STAGE_ORDER.forEach((st, idx) => {
+        const icon = document.getElementById(`timelineIcon_${st}`);
+        const title = document.getElementById(`timelineTitle_${st}`);
+        const tag = document.getElementById(`timelineTag_${st}`);
+        const row = document.getElementById(`timelineStage_${st}`);
+
+        if (idx < currIdx) {
+          // Completed
+          icon.className = "w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-sm";
+          icon.style.backgroundColor = "var(--mint)";
+          icon.innerHTML = "✓";
+          title.className = "font-bold text-slate-800";
+          tag.classList.add("hidden");
+          row.classList.remove("bg-indigo-50/50", "border-indigo-200");
+        } else if (idx === currIdx) {
+          // Current Active
+          icon.className = "w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white shrink-0 shadow pulse-dot";
+          icon.style.backgroundColor = "var(--navy)";
+          icon.innerHTML = (idx + 1).toString();
+          title.className = "font-extrabold text-slate-900";
+          tag.classList.remove("hidden");
+          row.className = "stage-item p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/40 flex items-center space-x-3";
+        } else {
+          // Future
+          icon.className = "w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] bg-slate-100 text-slate-400 shrink-0";
+          icon.style.backgroundColor = "";
+          icon.innerHTML = (idx + 1).toString();
+          title.className = "font-medium text-slate-500";
+          tag.classList.add("hidden");
+          row.className = "stage-item p-2.5 rounded-xl border border-transparent flex items-center space-x-3";
+        }
+      });
+    }
+
+    function initChart() {
+      const ctx = document.getElementById("financingChart");
+      if (!ctx) return;
+
+      const labels = STAGE_ORDER.map(s => STAGE_NAMES[s]);
+      
+      chartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Order Value (Ceiling)",
+              data: [50, 50, 50, 50, 50, 50, 50, 50, 50],
+              borderColor: "#1E2761",
+              borderWidth: 2,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              fill: false,
+              tension: 0
+            },
+            {
+              label: "Safe Capacity Curve",
+              data: [24.3, 26.7, 29.1, 31.5, 36.4, 38.8, 41.2, 43.6, 0],
+              borderColor: "#02C39A",
+              backgroundColor: "rgba(2, 195, 154, 0.12)",
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3,
+              pointRadius: [3, 3, 3, 3, 3, 3, 3, 3, 3],
+              pointBackgroundColor: "#02C39A"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 500 },
+          plugins: {
+            legend: {
+              display: true,
+              position: "top",
+              labels: { boxWidth: 12, font: { size: 10, weight: 600 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(c) {
+                  return `${c.dataset.label}: ₹${c.parsed.y}L`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              min: 0,
+              max: 60,
+              ticks: {
+                callback: function(v) { return `₹${v}L`; },
+                font: { size: 10 }
+              },
+              grid: { color: "#F1F5F9" }
+            },
+            x: {
+              ticks: { font: { size: 9 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function updateChart(currentStage, risk, drawn) {
+      if (!chartInstance) return;
+
+      const orderVal = assetState?.order_value || 5000000;
+      const currIdx = STAGE_ORDER.indexOf(currentStage);
+
+      const curveData = STAGE_ORDER.map((st) => {
+        const ltv = STAGE_LTV[st] || 0;
+        const capacity = orderVal * ltv * (1 - 0.4 * risk);
+        const safe = Math.max(capacity - drawn, 0);
+        return Math.round((safe / 100000) * 10) / 10;
+      });
+
+      const pointRadii = STAGE_ORDER.map((st, i) => i === currIdx ? 8 : 3);
+      const pointBg = STAGE_ORDER.map((st, i) => i === currIdx ? "#1E2761" : "#02C39A");
+
+      chartInstance.data.datasets[1].data = curveData;
+      chartInstance.data.datasets[1].pointRadius = pointRadii;
+      chartInstance.data.datasets[1].pointBackgroundColor = pointBg;
+      chartInstance.update();
+    }
+
+    // ==================== SECTION D: AI AGENTS FEED & Q&A ====================
+    function addAgentMessage(agent, reason, ts) {
+      const feed = document.getElementById("agentsFeedList");
+      if (!feed) return;
+
+      // Cap at 25 entries
+      while (feed.children.length >= 25) {
+        feed.removeChild(feed.lastChild);
+      }
+
+      const item = document.createElement("div");
+      item.className = "slide-in p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1";
+
+      const badgeClass = `badge-${agent.toLowerCase()}` || "badge-tracker";
+
+      item.innerHTML = `
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${badgeClass}">${agent}</span>
+          <span class="text-slate-400 font-mono text-[10px]">${ts || new Date().toLocaleTimeString()}</span>
+        </div>
+        <p class="text-xs text-slate-700 font-medium leading-relaxed">${reason}</p>
+      `;
+
+      feed.insertBefore(item, feed.firstChild);
+    }
+
+    async function handleAskTwin(e) {
+      if (e) e.preventDefault();
+      const inp = document.getElementById("askTwinInput");
+      const q = inp.value.trim();
+      if (!q) return;
+      inp.value = "";
+
+      // Add three-dot pending card
+      const pendingCard = createPendingAgentCard("Assistant");
+
+      try {
+        const res = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q })
+        });
+        const data = await res.json();
+        pendingCard.remove();
+        if (data.answer) {
+          // WS will also push, or fallback
+        }
+      } catch {
+        pendingCard.remove();
+        addAgentMessage("Assistant", "Unable to reach CapitalTwin AI engine.", new Date().toLocaleTimeString());
+      }
+    }
+
+    async function askStageExplanation(stageName) {
+      const q = `Explain what happens to my financing at the ${stageName} stage.`;
+      const pendingCard = createPendingAgentCard("Assistant");
+
+      try {
+        const res = await fetch("/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q })
+        });
+        const data = await res.json();
+        pendingCard.remove();
+      } catch {
+        pendingCard.remove();
+      }
+    }
+
+    function createPendingAgentCard(agent) {
+      const feed = document.getElementById("agentsFeedList");
+      const item = document.createElement("div");
+      item.className = "slide-in p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5";
+      item.innerHTML = `
+        <div class="flex items-center justify-between text-[11px]">
+          <span class="px-2 py-0.5 rounded-full font-bold uppercase tracking-wider badge-assistant">${agent}</span>
+          <span class="text-slate-400 font-mono text-[10px]">Thinking...</span>
+        </div>
+        <div class="flex items-center space-x-1.5 py-1">
+          <span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span>
+          <span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>
+          <span class="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]"></span>
+        </div>
+      `;
+      feed.insertBefore(item, feed.firstChild);
+      return item;
+    }
+
+    // ==================== SECTION D: FINANCING REQUEST ====================
+    function setAmountPercent(pct) {
+      const safe = assetState?.financial?.safe_limit || 0;
+      const amt = Math.floor(safe * pct);
+      document.getElementById("financingAmountInput").value = amt > 0 ? amt : "";
+    }
+
+    async function handleFinancingRequest() {
+      const input = document.getElementById("financingAmountInput");
+      const val = input.value.trim();
+      const amount = val ? parseInt(val) : (assetState?.financial?.safe_limit || 0);
+
+      try {
+        const res = await fetch("/financing/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ asset_id: "ORD-123", amount })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          showToast(`Financing requested: ₹${amount.toLocaleString("en-IN")}. Bank battle opened!`, "mint");
+          input.value = "";
+          if (currentUser?.role === "admin") {
+            switchView("lender");
+          }
+        } else if (res.status === 409) {
+          showToast(`Request Blocked: ${data.reason}`, "coral");
+        }
+      } catch (err) {
+        showToast("Error requesting financing", "coral");
+      }
+    }
+
+    // ==================== SECTION E: BANK BATTLE & AUCTION ====================
+    function onAuctionStart(amount) {
+      const badge = document.getElementById("auctionAmountBadge");
+      badge.textContent = `Financing: ₹${amount.toLocaleString("en-IN")}`;
+      badge.classList.remove("hidden");
+
+      document.getElementById("auctionSubtitle").textContent = "Bank Battle Active — Lenders cutting interest rates in real-time...";
+      document.getElementById("acceptOfferContainer").classList.add("hidden");
+
+      // Reset bot rate displays
+      document.getElementById("botRateCautious").textContent = "14.00%";
+      document.getElementById("botRateAggressive").textContent = "13.00%";
+      document.getElementById("botRateBalanced").textContent = "13.50%";
+
+      ["Cautious", "Aggressive", "Balanced"].forEach(b => {
+        const card = document.getElementById(`botCard${b}`);
+        card.style.transform = "scale(1)";
+        card.classList.remove("border-emerald-500", "shadow-lg", "bg-emerald-50/30");
+      });
+    }
+
+    function onAuctionBid(lender, rate) {
+      let botKey = "Cautious";
+      if (lender.includes("Aggressive")) botKey = "Aggressive";
+      if (lender.includes("Balanced")) botKey = "Balanced";
+
+      const rateEl = document.getElementById(`botRate${botKey}`);
+      const card = document.getElementById(`botCard${botKey}`);
+      if (rateEl) {
+        rateEl.textContent = `${rate.toFixed(2)}%`;
+      }
+      if (card) {
+        card.classList.add("bg-emerald-100");
+        setTimeout(() => card.classList.remove("bg-emerald-100"), 200);
+      }
+    }
+
+    function onAuctionEnd(best, amount) {
+      document.getElementById("auctionSubtitle").textContent = `Auction Concluded — Winner: ${best.lender} @ ${best.rate.toFixed(2)}%`;
+      
+      let bestKey = "Cautious";
+      if (best.lender.includes("Aggressive")) bestKey = "Aggressive";
+      if (best.lender.includes("Balanced")) bestKey = "Balanced";
+
+      ["Cautious", "Aggressive", "Balanced"].forEach(b => {
+        const card = document.getElementById(`botCard${b}`);
+        if (b === bestKey) {
+          card.style.transform = "scale(1.03)";
+          card.classList.add("border-emerald-500", "shadow-xl", "bg-emerald-50/40");
+          document.getElementById(`botTag${b}`).className = "inline-block text-[10px] font-black px-2 py-0.5 rounded text-white bg-emerald-600";
+          document.getElementById(`botTag${b}`).textContent = "★ BEST OFFER";
+        } else {
+          card.style.transform = "scale(1)";
+          card.classList.remove("border-emerald-500", "shadow-xl", "bg-emerald-50/40");
+        }
+      });
+
+      document.getElementById("acceptOfferContainer").classList.remove("hidden");
+
+      if (waitingForAuction) {
+        waitingForAuction = false;
+        setTimeout(handleAcceptOffer, 600);
+      }
+    }
+
+    async function handleAcceptOffer() {
+      try {
+        const res = await fetch("/financing/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Disbursed ₹${data.amount.toLocaleString("en-IN")} via ${data.lender}!`, "mint");
+          document.getElementById("acceptOfferContainer").classList.add("hidden");
+        }
+      } catch {
+        showToast("Error accepting financing offer", "coral");
+      }
+    }
+
+    // ==================== SECTION E: LEDGER RENDERING ====================
+    function renderLedger() {
+      const container = document.getElementById("ledgerList");
+      if (!container) return;
+      container.innerHTML = "";
+
+      const reversed = [...ledgerRecords].reverse();
+
+      reversed.forEach((rec) => {
+        const isFin = rec.type === "financing";
+        const sign = isFin ? "+" : "-";
+        const signColor = isFin ? "text-emerald-600" : "text-indigo-600";
+        const arrow = isFin ? "↑" : "↓";
+        const arrowBadge = isFin ? "bg-emerald-100 text-emerald-800" : "bg-indigo-100 text-indigo-800";
+
+        const item = document.createElement("div");
+        item.className = "slide-in p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100 transition space-y-1.5";
+        item.onclick = () => toggleLedgerExpand(item, rec);
+
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full flex items-center justify-center font-bold text-xs ${arrowBadge}">${arrow}</span>
+              <span class="font-bold text-slate-800 text-xs">${rec.lender || "Escrow Settlement"}</span>
+            </div>
+            <span class="font-extrabold text-xs ${signColor}">${sign}₹${Math.abs(rec.amount).toLocaleString("en-IN")}</span>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>⛓ ${rec.hash.slice(0, 14)}…</span>
+            <span>${rec.ts}</span>
+          </div>
+          <div class="expand-details hidden pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-600 space-y-1">
+            <p><strong>Type:</strong> ${rec.type} (${rec.note || "—"})</p>
+            <p class="truncate"><strong>Prev Hash:</strong> ${rec.prev_hash}</p>
+            <p class="truncate"><strong>Hash:</strong> ${rec.hash}</p>
+            <p class="text-emerald-700 font-bold">✓ Chain verified & linked</p>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function toggleLedgerExpand(el, rec) {
+      const details = el.querySelector(".expand-details");
+      if (details) details.classList.toggle("hidden");
+    }
+
+    function openFullLedgerModal() {
+      const modal = document.getElementById("ledgerModal");
+      const content = document.getElementById("modalLedgerContent");
+      content.innerHTML = "";
+
+      if (ledgerRecords.length === 0) {
+        content.innerHTML = "<p class='text-slate-400 text-center py-6'>No ledger entries recorded yet.</p>";
+      } else {
+        ledgerRecords.forEach((r, idx) => {
+          const card = document.createElement("div");
+          card.className = "p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1";
+          card.innerHTML = `
+            <div class="flex items-center justify-between font-bold text-slate-800">
+              <span>Block #${idx + 1} — ${r.type.toUpperCase()}</span>
+              <span class="text-emerald-600">₹${r.amount.toLocaleString("en-IN")}</span>
+            </div>
+            <p class="text-slate-500"><strong>Lender:</strong> ${r.lender} | <strong>Note:</strong> ${r.note || "—"}</p>
+            <p class="text-[10px] text-slate-400 break-all"><strong>Prev:</strong> ${r.prev_hash}</p>
+            <p class="text-[10px] text-slate-700 break-all"><strong>Hash:</strong> ${r.hash}</p>
+          `;
+          content.appendChild(card);
+        });
+      }
+
+      modal.classList.remove("hidden");
+    }
+
+    function closeLedgerModal() {
+      document.getElementById("ledgerModal").classList.add("hidden");
+    }
+
+    function openSettingsModal() { document.getElementById("settingsModal").classList.remove("hidden"); }
+    function closeSettingsModal() { document.getElementById("settingsModal").classList.add("hidden"); }
+    function openSupportModal() { document.getElementById("supportModal").classList.remove("hidden"); }
+    function closeSupportModal() { document.getElementById("supportModal").classList.add("hidden"); }
+
+    // ==================== SECTION F: CONTROL ROOM & AUTOPILOT ====================
+    async function triggerEvent(type) {
+      try {
+        const res = await fetch("/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ asset_id: "ORD-123", type })
+        });
+        const data = await res.json();
+        if (data.blocked) {
+          showToast(`Event Blocked: ${data.reason}`, "coral");
+        } else {
+          showToast(`Event fired: ${type}`, "navy");
+        }
+      } catch {
+        showToast(`Failed to trigger ${type}`, "coral");
+      }
+    }
+
+    async function triggerEventWithSpinner(type, btn) {
+      const originalText = btn.innerHTML;
+      btn.style.opacity = "0.7";
+      btn.style.pointerEvents = "none";
+      
+      await triggerEvent(type);
+      
+      setTimeout(() => {
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+      }, 400);
+    }
+
+    async function handleReset() {
+      try {
+        const res = await fetch("/reset", { method: "POST" });
+        if (res.ok) {
+          showToast("Demo reset — fresh digital twin initialized.", "navy");
+          autopilotIndex = 0;
+          updateAutopilotLabel();
+        }
+      } catch {
+        showToast("Reset failed", "coral");
+      }
+    }
+
+    // AUTOPILOT ENGINE
+    function updateAutopilotLabel() {
+      const label = document.getElementById("autopilotLabel");
+      if (autopilotIndex >= AUTOPILOT_STEPS.length) {
+        label.textContent = "Demo complete — Reset to run again";
+      } else {
+        const step = AUTOPILOT_STEPS[autopilotIndex];
+        label.textContent = `▶ Next: ${step.name} — Step ${autopilotIndex + 1}/11`;
+      }
+    }
+
+    async function advanceAutopilot() {
+      if (autopilotIndex >= AUTOPILOT_STEPS.length) {
+        await handleReset();
+        return;
+      }
+
+      const step = AUTOPILOT_STEPS[autopilotIndex];
+      const spinner = document.getElementById("autopilotSpinner");
+      spinner.classList.remove("hidden");
+
+      if (step.type === "event") {
+        await triggerEvent(step.eventType);
+        autopilotIndex++;
+        spinner.classList.add("hidden");
+        updateAutopilotLabel();
+      } else if (step.type === "financing_request") {
+        const safe = assetState?.financial?.safe_limit || 2430000;
+        await fetch("/financing/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ asset_id: "ORD-123", amount: safe })
+        });
+        showToast(`Autopilot: Requested ₹${safe.toLocaleString("en-IN")} financing`, "mint");
+        autopilotIndex++;
+        spinner.classList.add("hidden");
+        updateAutopilotLabel();
+      } else if (step.type === "financing_accept") {
+        // Wait for auction to finish if in progress
+        waitingForAuction = true;
+        showToast("Autopilot: Waiting for Bank Battle auction to complete...", "navy");
+        // Handled in onAuctionEnd
+        autopilotIndex++;
+        spinner.classList.add("hidden");
+        updateAutopilotLabel();
+      }
+    }
+
+    // ==================== SECTION G: GLOBALS (TTS, TOAST, CONFETTI, SHAKE) ====================
+    function showToast(text, type = "navy") {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast-pill";
+      
+      if (type === "mint") {
+        toast.style.background = "var(--mint-dark)";
+      } else if (type === "coral") {
+        toast.style.background = "var(--coral)";
+      } else {
+        toast.style.background = "var(--navy)";
+      }
+
+      toast.textContent = text;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transition = "opacity 0.3s ease";
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    function showFraudBanner(reason) {
+      const banner = document.getElementById("fraudBanner");
+      document.getElementById("fraudBannerText").textContent = reason;
+      banner.classList.remove("hidden");
+      banner.classList.add("shake-anim");
+
+      setTimeout(() => {
+        banner.classList.remove("shake-anim");
+      }, 300);
+
+      setTimeout(() => {
+        banner.classList.add("hidden");
+      }, 3500);
+    }
+
+    function hideFraudBanner() {
+      document.getElementById("fraudBanner").classList.add("hidden");
+    }
+
+    function speak(text) {
+      const voiceOn = document.getElementById("voiceCheckbox")?.checked;
+      if (!voiceOn || !text) return;
+
+      fetch(`/speak?text=${encodeURIComponent(text.slice(0, 400))}`)
+        .then(res => {
+          if (res.ok) {
+            return res.blob().then(blob => {
+              const audio = new Audio(URL.createObjectURL(blob));
+              audio.play();
+            });
+          }
+          throw new Error("TTS fallback");
+        })
+        .catch(() => {
+          if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = 1.05;
+            window.speechSynthesis.speak(u);
+          }
+        });
+    }
+
+    // Hand-rolled Canvas Confetti Burst (~60 mint/navy particles, zero libraries)
+    function launchConfetti() {
+      const canvas = document.getElementById("confettiCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ["#02C39A", "#1E2761", "#00A884", "#7C5CDB", "#FDE68A"];
+      const particles = [];
+
+      for (let i = 0; i < 65; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 16,
+          vy: (Math.random() - 0.7) * 18,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          vrot: (Math.random() - 0.5) * 10,
+          opacity: 1
+        });
+      }
+
+      const startTime = performance.now();
+
+      function drawConfetti(now) {
+        const elapsed = (now - startTime) / 1000;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.4; // gravity
+          p.rotation += p.vrot;
+          p.opacity = Math.max(0, 1 - elapsed / 2.0);
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.globalAlpha = p.opacity;
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+
+        if (elapsed < 2.0) {
+          requestAnimationFrame(drawConfetti);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      requestAnimationFrame(drawConfetti);
+    }
+
+    // Number Count-Up Animation Helper
+    function animateValue(id, start, end, duration, formatFn) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (start === end) {
+        el.textContent = formatFn(end);
+        return;
+      }
+      const range = end - start;
+      let startTime = null;
+
+      function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        const current = Math.floor(start + range * progress);
+        el.textContent = formatFn(current);
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          el.textContent = formatFn(end);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    function formatIndian(val) {
+      if (val === 0) return "0";
+      return val.toLocaleString("en-IN");
+    }
+  </script>
+</body>
+</html>
